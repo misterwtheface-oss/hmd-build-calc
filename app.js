@@ -88,15 +88,19 @@ function mini(x, sub) {
 }
 
 const FMT = { percent: "%", cash: "$", seconds: "s", number: "" };
+// game formatting (hmd_loctext_fill): percent = value x 100, cash = $value, seconds / number = the value
+const num = (v) => String(Math.round(v * 100) / 100);
+const fmtVal = (v, f) => (f === "percent" ? num(v * 100) + "%" : f === "cash" ? "$" + num(v) : num(v));
 function renderSegs(seg) {
   return seg
-    .map(([kind, a, b]) => {
+    .map(([kind, a, b, c]) => {
       if (kind === "t") return esc(a);
       if (kind === "k")
         return isSynergy(a) ? `<span class="k" data-open="kw:${encodeURIComponent(a)}">${esc(b)}</span>` : `<span class="k solo">${esc(b)}</span>`;
       if (kind === "d") return `<span class="d" data-open="dude:${a}">${esc(b)}</span>`;
       if (kind === "u") return `<span class="u">${esc(a)}</span>`;
-      if (kind === "v") return `<span class="v">${esc(a.replace(/_/g, " "))}${FMT[b] ? " " + FMT[b] : ""}</span>`;
+      if (kind === "v")
+        return c != null ? `<b class="n">${fmtVal(c, b)}</b>` : `<span class="v">${esc(a.replace(/_/g, " "))}${FMT[b] ? " " + FMT[b] : ""}</span>`;
       return "";
     })
     .join("");
@@ -137,7 +141,7 @@ function renderControls() {
 }
 
 const match = (q, ...fields) => !q || fields.some((f) => (f || "").toLowerCase().includes(q));
-const segText = (seg) => seg.map((s) => (s[0] === "v" ? s[1] : s[s.length - 1] || "")).join("");
+const segText = (seg) => seg.map((s) => (s[0] === "v" ? (s[3] != null ? fmtVal(s[3], s[2]) : s[1]) : s[s.length - 1] || "")).join("");
 
 function renderList() {
   const q = state.q.trim().toLowerCase();
