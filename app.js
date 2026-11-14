@@ -181,6 +181,13 @@ function renderList() {
 }
 
 /* ---------- detail views ---------- */
+// full relic container: header (opens the relic), its effect text and its synergy tags
+function relicCard(r) {
+  const kws = synKw(r);
+  return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span></button>
+    <div class="rdesc">${renderSegs(r.seg)}</div>${kws.length ? `<div class="chipline">${kws.map(kwChip).join("")}</div>` : ""}</div>`;
+}
+
 function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
@@ -188,7 +195,7 @@ function dudeView(t) {
   const role = FEATURES.roles && d.role
     ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(d.role.sub_role)}</span></div><div class="tags">${d.role.tags.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>`
     : "";
-  const own = relicsOfDude(t).map((r) => mini(r));
+  const own = relicsOfDude(t).map(relicCard);
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
   const out = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x]).map((x) => mini(DUDE[x]));
@@ -203,7 +210,7 @@ function dudeView(t) {
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}</div>` : ""}
-    ${section("Relics", grid(own))}
+    ${section("Relics", own.length ? `<div class="rcards">${own.join("")}</div>` : "")}
     ${section("Family relics", famRelics ? `<div class="chipline">${famRelics}</div>` : "")}
     ${section("Family", grid(mates))}
     ${section("Names", grid(out))}
