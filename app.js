@@ -16,7 +16,7 @@ const byName = (a, b) => (a.name || "").localeCompare(b.name || "");
 const dudesSorted = H.dudes.filter((d) => d.name).sort(byName);
 const relicsSorted = H.relics.slice().sort(byName);
 const relicsOfDude = (t) => relicsSorted.filter((r) => r.dude === t);
-const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool === "family" && r.fam === f);
+const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool !== "dude" && r.fam === f);
 const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
 const refsFrom = (key) => H.refs.filter((e) => e.a === key);
 const refsTo = (key) => H.refs.filter((e) => e.b === key);
@@ -223,7 +223,7 @@ function relicView(id) {
   const r = RELIC[id];
   if (!r) return null;
   const key = "relic:" + id;
-  const pool = r.pool === "dude" ? dudeChip(r.dude) + famChip(r.fam) : r.pool === "family" ? famChip(r.fam) : `<span class="badge">${esc(poolLabel(r))}</span>`;
+  const pool = r.pool === "dude" ? dudeChip(r.dude) + famChip(r.fam) : r.pool === "family" ? famChip(r.fam) : `<span class="badge">${esc(poolLabel(r))}</span>${famChip(r.fam)}`;
   const refs = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x] && x !== r.dude).map((x) => mini(DUDE[x]));
   const kws = synKw(r).length ? `<div class="chipline">${synKw(r).map(kwChip).join("")}</div>` : "";
   const shared = FEATURES.mechanics
@@ -245,7 +245,7 @@ function familyView(f) {
     .map((d) => `<h3>${esc(d.name)}</h3>${grid(relicsOfDude(d.t).map((r) => mini(r)))}`)
     .join("");
   return `<div class="hero">${img(fam.icon, fam.name)}<div><h2>${esc(fam.full)}</h2></div></div>
-    <p class="prose">${esc(fam.desc)}</p>
+    ${fam.desc ? `<p class="prose">${esc(fam.desc)}</p>` : ""}
     ${section("Common effects", effectList(f, 8, true))}
     ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && d.role ? esc(d.role.role + " · " + d.role.sub_role) : ""))))}
     ${section("Family relics", relicCards(relicsOfFamilyPool(f)))}

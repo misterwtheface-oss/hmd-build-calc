@@ -23,6 +23,7 @@ SPR = os.path.join(X, "assets", "sprites")
 OUT_ICONS = os.path.join(APP, "assets", "icons")
 STRICT = "--strict" in sys.argv
 SIZE = 96
+GLOBAL = "global"
 
 errors, warnings, used = [], [], {}
 
@@ -59,6 +60,10 @@ def main():
     for f in E["families"]:
         fams.append({"id": f["id"], "name": f["name"], "full": f["full_name"], "desc": f["desc"],
                      "icon": icon("sp_famicon_" + f["id"], "family " + f["id"], "convention")})
+    # Global: the app's own grouping (user, 2026-11-14) for everything outside a game Family:
+    # Dudes with no Family and universal / Promoter relics. Icon = the game's planet icon.
+    fams.append({"id": GLOBAL, "name": "Global", "full": "Global", "desc": "",
+                 "icon": icon("sp_icon_planet", "family global", "convention")})
     pools = {"universal": {"name": "Universal", "icon": None},
              "promoter": {"name": "Promoter", "icon": icon("sp_ui_promoter_portrait", "pool promoter", "convention")}}
 
@@ -71,7 +76,7 @@ def main():
         if not d["name"]:
             warnings.append("dude %s has no name" % d["type"])
         a = d["art"]
-        dudes.append({"t": d["type"], "name": d["name"], "fam": d["families"],
+        dudes.append({"t": d["type"], "name": d["name"], "fam": d["families"] or [GLOBAL],
                       "ab": d["ability"]["name"], "seg": d["segments"], "kw": d["keywords"],
                       "tok": d["tokens"], "role": d.get("role"),
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})
@@ -82,7 +87,8 @@ def main():
         if not r["desc"]:
             warnings.append("relic %s has no description" % r["id"])
         relics.append({"id": r["id"], "name": r["name"], "seg": r["segments"], "kw": r["keywords"],
-                       "tok": r["tokens"], "pool": r["pool"], "fam": r["family"], "dude": r["dude"],
+                       "tok": r["tokens"], "pool": r["pool"],
+                       "fam": r["family"] or (GLOBAL if r["pool"] in ("universal", "promoter") else None), "dude": r["dude"],
                        "icon": icon(a["sprite"], "relic " + r["id"], a["provenance"])})
 
     refs = [{"a": e["a"], "b": e["b"], "basis": e["basis"]} for e in E["edges"] if e["kind"] == "reference"]
