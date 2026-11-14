@@ -27,6 +27,26 @@ for (const x of [...H.dudes, ...H.relics]) for (const k of x.kw) KW_DF[k] = (KW_
 const NDOCS = H.dudes.length + H.relics.length;
 const kwWeight = (k) => Math.log(NDOCS / (KW_DF[k] || 1));
 
+// effect types: keywords that name an effect, not a target / rule term
+const NON_EFFECT = new Set(["Roster Dude", "Roster", "Team", "Direct Damage", "Cooldown", "HP", "Independent Stacking",
+  "Chained Effect", "Primary Target"]);
+function familyEffects(f, n) {
+  const count = {};
+  const members = membersOf(f).map((d) => d.t);
+  const items = [...membersOf(f), ...H.relics.filter((r) => r.fam === f || members.includes(r.dude))];
+  for (const x of items) for (const k of x.kw) if (!NON_EFFECT.has(k)) count[k] = (count[k] || 0) + 1;
+  return Object.entries(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n);
+}
+// magnitude bar: share of the largest value of this field among the shown entries (rule A-magnitude-bars)
+const bar = (v, max) => `<span class="bar"><i style="width:${max ? Math.round((100 * v) / max) : 0}%"></i></span>`;
+function effectList(f, n, big) {
+  const eff = familyEffects(f, n);
+  const max = eff.length ? eff[0][1] : 0;
+  return `<div class="effects${big ? " big" : ""}">${eff
+    .map(([k, v]) => `<span class="eff"${big ? ` data-open="kw:${encodeURIComponent(k)}"` : ""}>${esc(k)}${bar(v, max)}</span>`)
+    .join("")}</div>`;
+}
+
 function sharedMechanics(kw, pool, selfKey, limit) {
   const mine = new Set(kw);
   const scored = [];
@@ -77,12 +97,12 @@ const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</di
 
 /* ---------- tabs ---------- */
 const TABS = [
+  { id: "families", name: "Families" },
   { id: "dudes", name: "Dudes" },
   { id: "relics", name: "Relics" },
-  { id: "families", name: "Families" },
   ...(FEATURES.mechanics ? [{ id: "mechanics", name: "Mechanics" }] : []),
 ];
-const state = { tab: "dudes", q: "", fam: null, role: null, pool: null };
+const state = { tab: "families", q: "", fam: null, role: null, pool: null };
 const scrollMemo = {};
 
 function renderTabs() {
@@ -131,12 +151,14 @@ function renderList() {
         <span class="sub">${esc(poolLabel(r) || "")}</span></span><span class="tail">${poolIcon(r)}</span></button>`
       );
   } else if (state.tab === "families") {
-    rows = H.families
-      .filter((f) => match(q, f.name, f.desc))
+    const cards = H.families
+      .filter((f) => match(q, f.name, f.desc, ...membersOf(f.id).map((d) => d.name)))
       .map(
-        (f) => `<button class="row" data-open="family:${f.id}">${img(f.icon, f.name, "ic")}<span class="main"><span class="name">${esc(f.full)}</span>
-        <span class="sub">${esc(f.desc)}</span></span></button>`
+        (f) => `<button class="famcard" data-open="family:${f.id}"><span class="head">${img(f.icon, f.name)}<span>${esc(f.name)}</span></span>
+        ${effectList(f.id, 3, false)}</button>`
       );
+    $("#list").innerHTML = cards.length ? `<div class="famgrid">${cards.join("")}</div>` : `<div class="empty">No matches</div>`;
+    return;
   } else {
     rows = H.keywords
       .filter((k) => match(q, k.id))
@@ -151,7 +173,7 @@ function dudeView(t) {
   if (!d) return null;
   const key = "dude:" + t;
   const role = FEATURES.roles && d.role
-    ? `<div class="meta">${roleBadge(d)}<span>${esc(d.role.sub_role)}</span></div><div class="tags">${d.role.tags.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>`
+    ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(d.role.sub_role)}</span></div><div class="tags">${d.role.tags.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>`
     : "";
   const own = relicsOfDude(t).map((r) => mini(r));
   const famRelics = d.fam.map((f) => famChip(f)).join("");
@@ -204,6 +226,7 @@ function familyView(f) {
     .join("");
   return `<div class="hero">${img(fam.icon, fam.name)}<div><h2>${esc(fam.full)}</h2></div></div>
     <p class="prose">${esc(fam.desc)}</p>
+    ${section("Common effects", effectList(f, 8, true))}
     ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && d.role ? esc(d.role.role + " · " + d.role.sub_role) : ""))))}
     ${section("Family relics", grid(famPool))}
     ${perDude}`;
