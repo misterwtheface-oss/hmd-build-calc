@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#4f0e21" />
   <title>How Many Dudes? Codex</title>
   <link rel="stylesheet" href="fonts.css?v=6e9ad3c0" />
-  <link rel="stylesheet" href="styles.css?v=62f68ad1" />
+  <link rel="stylesheet" href="styles.css?v=d5bd2a7d" />
 </head>
 <body>
   <header class="top">
@@ -19,12 +19,12 @@
   </main>
   <div id="overlay" class="overlay hidden" aria-hidden="true">
     <div class="sheet" role="dialog" aria-modal="true">
-      <div class="sheet-head"><button id="back" class="back" type="button">‹ Back</button></div>
+      <div class="sheet-head"><button id="back" class="back" type="button">‹ Back</button><span id="headact"></span></div>
       <div id="detail" class="detail"></div>
     </div>
   </div>
   <script src="data.js?v=90d53269"></script>
-  <script src="app.js?v=edd238ab" defer></script>
+  <script src="app.js?v=7d4ba092" defer></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol === "https:") {
       addEventListener("load", () => navigator.serviceWorker.register("sw.js"));

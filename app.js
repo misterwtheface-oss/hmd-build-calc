@@ -294,7 +294,11 @@ function relicCard(r) {
     <div class="rdesc">${renderSegs(r.seg)}</div>${kws.length ? `<div class="chipline">${kws.map(kwChip).join("")}</div>` : ""}</div>`;
 }
 
-const offerBtn = (key) => (FEATURES.draft ? `<button class="offer" data-offer="${key}">+ Draft</button>` : "");
+// draft action in the detail sheet's header bar (Dude and relic pages)
+const offerBtn = (key) =>
+  !FEATURES.draft ? "" : draft.slots.includes(key)
+    ? `<button class="offer" disabled>In draft</button>`
+    : `<button class="offer" data-offer="${key}">+ Add to Draft</button>`;
 const relicCards = (rs) => (rs.length ? `<div class="rcards">${rs.map(relicCard).join("")}</div>` : "");
 
 function dudeView(t) {
@@ -315,7 +319,7 @@ function dudeView(t) {
   const shared = FEATURES.mechanics
     ? sharedMechanics(d.kw, H.dudes, key, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
     : [];
-  return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}${offerBtn(key)}</div></div></div>
+  return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}</div>` : ""}
     ${section("Relics", relicCards(relicsOfDude(t)))}
@@ -336,7 +340,7 @@ function relicView(id) {
   const shared = FEATURES.mechanics
     ? sharedMechanics(r.kw, H.dudes, null, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
     : [];
-  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}${offerBtn(key)}</div></div></div>
+  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}</div></div></div>
     <div class="desc">${renderSegs(r.seg)}</div>
     ${section("Names", grid(refs))}
     ${FEATURES.mechanics ? section("Mechanics", kws) : ""}
@@ -376,6 +380,7 @@ function route() {
     const html = VIEWS[m[1]](m[2]);
     if (html) {
       $("#detail").innerHTML = html;
+      $("#headact").innerHTML = m[1] === "dude" || m[1] === "relic" ? offerBtn(m[1] + ":" + m[2]) : "";
       $("#overlay").classList.remove("hidden");
       $("#overlay").setAttribute("aria-hidden", "false");
       $(".sheet").scrollTop = 0;
@@ -443,7 +448,7 @@ document.addEventListener("click", (e) => {
     else if (ds.clearbuild) draft.build.length = 0;
     else if (ds.offer) {
       offer(ds.offer);
-      dr.textContent = "Added";
+      dr.textContent = "In draft";
       dr.disabled = true;
     }
     saveDraft();
