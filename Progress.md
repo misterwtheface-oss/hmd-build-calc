@@ -19,5 +19,8 @@
 - [ ] NEXT SESSION (user, 2026-11-14): drop all keyword chips (Mechanics tab, relic / Family tags, shared mechanics,
       draft overlap kw) and rebuild synergy measures from scratch. Reason: many [c:g] keywords are stat names that sit
       next to a token value (Attack Power, Max HP...), not a real synergy signal; tokens now carry their numbers.
+      2026-11-14: data side done in the extract (synergy tagging v2, _hmd_extract/CONTEXT_MAP.md): facets per
+      effect, `synergy` edges ranked by channel rarity, derived roles. App still shows keyword chips until the user
+      picks how to thin the graph.
 - [ ] User review of roles (Role / Sub-Role / Tags); refactor as needed.
 - [ ] Remaining 67 token numbers: constructor arguments fed from globals and a few tokens (speed, discount) outside the variables struct.
