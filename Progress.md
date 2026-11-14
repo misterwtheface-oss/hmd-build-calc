@@ -16,5 +16,8 @@
 - 2026-11-14 (4): token numbers filled from game code (94%: 1117 of 1184); percent = value x 100 as the game shows it; unresolved tokens keep the named placeholder.
 
 ## Open
-- [ ] User review of roles (Role / Sub-Role / Tags) and synergy views; refactor as needed.
+- [ ] NEXT SESSION (user, 2026-11-14): drop all keyword chips (Mechanics tab, relic / Family tags, shared mechanics,
+      draft overlap kw) and rebuild synergy measures from scratch. Reason: many [c:g] keywords are stat names that sit
+      next to a token value (Attack Power, Max HP...), not a real synergy signal; tokens now carry their numbers.
+- [ ] User review of roles (Role / Sub-Role / Tags); refactor as needed.
 - [ ] Remaining 67 token numbers: constructor arguments fed from globals and a few tokens (speed, discount) outside the variables struct.
