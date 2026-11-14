@@ -263,13 +263,22 @@ function renderDraft() {
   const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
   const counts = {};
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
-  const tiles = Object.keys(counts).map(
-    (k) => `<div class="btile">${mini(itemOf(k), counts[k] > 1 ? "×" + counts[k] : "")}<button class="x" data-unbuild="${k}" aria-label="Remove">×</button></div>`
-  );
+  const tile = (k) =>
+    `<div class="btile">${mini(itemOf(k), counts[k] > 1 ? "×" + counts[k] : "")}<button class="x" data-unbuild="${k}" aria-label="Remove">×</button></div>`;
+  // each Dude with his own drafted relics nested under him; every other relic after
+  const keys = Object.keys(counts);
+  const dudeKeys = keys.filter((k) => k.startsWith("dude:"));
+  const ownerIn = (k) => { const x = itemOf(k); return x.pool === "dude" && counts["dude:" + x.dude]; };
+  const groups = dudeKeys.map((dk) => {
+    const own = keys.filter((k) => k.startsWith("relic:") && itemOf(k).dude === dk.slice(5));
+    return `<div class="bgroup">${tile(dk)}${own.length ? `<div class="bnest">${own.map(tile).join("")}</div>` : ""}</div>`;
+  });
+  const loose = keys.filter((k) => k.startsWith("relic:") && !ownerIn(k));
+  const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);
   return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>
     <h3>Build</h3>${tiles.length
-      ? `<div class="grid">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
+      ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
       : `<div class="empty">Take an offer to start a build</div>`}`;
 }

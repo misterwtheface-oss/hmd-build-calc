@@ -164,6 +164,13 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .clear { margin-top: 12px; background: var(--panel2); border: 1px solid var(--line); }
 .offer { padding: 7px 14px; font-size: 16px; background: var(--scarlet); color: var(--cream); border: 2px solid var(--mustard); border-radius: 999px; }
 .offer:disabled { background: var(--panel2); color: var(--olive); border-color: var(--line); cursor: default; }
+.bgroups { display: flex; flex-direction: column; gap: 8px; }
+.bgroup { display: flex; flex-direction: column; gap: 6px; }
+.bnest {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
+  margin-left: 14px; padding-left: 10px; border-left: 2px solid var(--line);
+}
+@media (min-width: 560px) { .bnest { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .btile { position: relative; min-width: 0; }
 .btile .mini { padding-right: 40px; }
 .btile .x { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 28px; height: 28px; }
