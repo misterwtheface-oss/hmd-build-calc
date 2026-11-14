@@ -188,6 +188,8 @@ function relicCard(r) {
     <div class="rdesc">${renderSegs(r.seg)}</div>${kws.length ? `<div class="chipline">${kws.map(kwChip).join("")}</div>` : ""}</div>`;
 }
 
+const relicCards = (rs) => (rs.length ? `<div class="rcards">${rs.map(relicCard).join("")}</div>` : "");
+
 function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
@@ -195,7 +197,6 @@ function dudeView(t) {
   const role = FEATURES.roles && d.role
     ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(d.role.sub_role)}</span></div><div class="tags">${d.role.tags.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>`
     : "";
-  const own = relicsOfDude(t).map(relicCard);
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
   const out = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x]).map((x) => mini(DUDE[x]));
@@ -210,7 +211,7 @@ function dudeView(t) {
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}</div>` : ""}
-    ${section("Relics", own.length ? `<div class="rcards">${own.join("")}</div>` : "")}
+    ${section("Relics", relicCards(relicsOfDude(t)))}
     ${section("Family relics", famRelics ? `<div class="chipline">${famRelics}</div>` : "")}
     ${section("Family", grid(mates))}
     ${section("Names", grid(out))}
@@ -239,7 +240,6 @@ function familyView(f) {
   const fam = FAM[f];
   if (!fam) return null;
   const members = membersOf(f);
-  const famPool = relicsOfFamilyPool(f).map((r) => mini(r));
   const perDude = members
     .filter((d) => relicsOfDude(d.t).length)
     .map((d) => `<h3>${esc(d.name)}</h3>${grid(relicsOfDude(d.t).map((r) => mini(r)))}`)
@@ -248,7 +248,7 @@ function familyView(f) {
     <p class="prose">${esc(fam.desc)}</p>
     ${section("Common effects", effectList(f, 8, true))}
     ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && d.role ? esc(d.role.role + " · " + d.role.sub_role) : ""))))}
-    ${section("Family relics", grid(famPool))}
+    ${section("Family relics", relicCards(relicsOfFamilyPool(f)))}
     ${perDude}`;
 }
 
