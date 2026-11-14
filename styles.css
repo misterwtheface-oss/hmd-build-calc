@@ -114,6 +114,7 @@ main { padding: 10px 12px 24px; max-width: 900px; margin: 0 auto; }
 .desc { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin: 8px 0; }
 .desc .ab { font: 18px var(--narrow); color: var(--mustard); margin-bottom: 4px; }
 .k { color: var(--teal); font-weight: 600; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.k.solo { cursor: default; text-decoration: none; }
 .d { color: var(--brick); font-weight: 600; cursor: pointer; }
 .u { color: var(--brick); font-weight: 600; }
 .v {

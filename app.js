@@ -21,6 +21,14 @@ const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
 const refsFrom = (key) => H.refs.filter((e) => e.a === key);
 const refsTo = (key) => H.refs.filter((e) => e.b === key);
 
+// Synergy keywords: used by at least two separate units. A unit is a Dude together with his own relics, or one
+// Family / universal / Promoter relic. A keyword only one unit uses (Burger: Chef + Chef relics) links nothing.
+const unitOf = (x) => (x.t ? "dude:" + x.t : x.pool === "dude" ? "dude:" + x.dude : "relic:" + x.id);
+const KW_UNITS = {};
+for (const x of [...H.dudes, ...H.relics]) for (const k of x.kw) (KW_UNITS[k] = KW_UNITS[k] || new Set()).add(unitOf(x));
+const isSynergy = (k) => (KW_UNITS[k]?.size || 0) >= 2;
+const synKw = (x) => x.kw.filter(isSynergy);
+
 // keyword rarity weight: shared rare mechanics count more than shared common stats
 const KW_DF = {};
 for (const x of [...H.dudes, ...H.relics]) for (const k of x.kw) KW_DF[k] = (KW_DF[k] || 0) + 1;
@@ -34,7 +42,7 @@ function familyEffects(f, n) {
   const count = {};
   const members = membersOf(f).map((d) => d.t);
   const items = [...membersOf(f), ...H.relics.filter((r) => r.fam === f || members.includes(r.dude))];
-  for (const x of items) for (const k of x.kw) if (!NON_EFFECT.has(k)) count[k] = (count[k] || 0) + 1;
+  for (const x of items) for (const k of synKw(x)) if (!NON_EFFECT.has(k)) count[k] = (count[k] || 0) + 1;
   return Object.entries(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n);
 }
 // magnitude bar: share of the largest value of this field among the shown entries (rule A-magnitude-bars)
@@ -48,12 +56,12 @@ function effectList(f, n, big) {
 }
 
 function sharedMechanics(kw, pool, selfKey, limit) {
-  const mine = new Set(kw);
+  const mine = new Set(kw.filter(isSynergy));
   const scored = [];
   for (const x of pool) {
     const key = x.t ? "dude:" + x.t : "relic:" + x.id;
     if (key === selfKey) continue;
-    const shared = x.kw.filter((k) => mine.has(k));
+    const shared = synKw(x).filter((k) => mine.has(k));
     if (!shared.length) continue;
     const score = shared.reduce((s, k) => s + kwWeight(k), 0);
     scored.push({ x, shared: shared.sort((a, b) => kwWeight(b) - kwWeight(a)), score });
@@ -84,7 +92,8 @@ function renderSegs(seg) {
   return seg
     .map(([kind, a, b]) => {
       if (kind === "t") return esc(a);
-      if (kind === "k") return `<span class="k" data-open="kw:${encodeURIComponent(a)}">${esc(b)}</span>`;
+      if (kind === "k")
+        return isSynergy(a) ? `<span class="k" data-open="kw:${encodeURIComponent(a)}">${esc(b)}</span>` : `<span class="k solo">${esc(b)}</span>`;
       if (kind === "d") return `<span class="d" data-open="dude:${a}">${esc(b)}</span>`;
       if (kind === "u") return `<span class="u">${esc(a)}</span>`;
       if (kind === "v") return `<span class="v">${esc(a.replace(/_/g, " "))}${FMT[b] ? " " + FMT[b] : ""}</span>`;
@@ -161,7 +170,7 @@ function renderList() {
     return;
   } else {
     rows = H.keywords
-      .filter((k) => match(q, k.id))
+      .filter((k) => isSynergy(k.id) && match(q, k.id))
       .map((k) => `<button class="row" data-open="kw:${encodeURIComponent(k.id)}"><span class="main"><span class="name">${esc(k.id)}</span></span></button>`);
   }
   $("#list").innerHTML = rows.join("") || `<div class="empty">No matches</div>`;
@@ -204,7 +213,7 @@ function relicView(id) {
   const key = "relic:" + id;
   const pool = r.pool === "dude" ? dudeChip(r.dude) + famChip(r.fam) : r.pool === "family" ? famChip(r.fam) : `<span class="badge">${esc(poolLabel(r))}</span>`;
   const refs = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x] && x !== r.dude).map((x) => mini(DUDE[x]));
-  const kws = r.kw.length ? `<div class="chipline">${r.kw.map(kwChip).join("")}</div>` : "";
+  const kws = synKw(r).length ? `<div class="chipline">${synKw(r).map(kwChip).join("")}</div>` : "";
   const shared = FEATURES.mechanics
     ? sharedMechanics(r.kw, H.dudes, null, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
     : [];
