@@ -14,13 +14,11 @@
   effects, Mechanics and shared mechanics and stay plain text. 62 of 139 keywords qualify. Keyword inflections are
   merged in the extract's build_entities.py CANON so variants don't hide shared mechanics.
 - 2026-11-14 (4): token numbers filled from game code (94%: 1117 of 1184); percent = value x 100 as the game shows it; unresolved tokens keep the named placeholder.
+- 2026-11-14 (5): keyword chips retired. Synergy v2 in the app: effect chips (Gives / Scales / Triggers / On /
+  Boosts + channel), Synergies tab (channels, rarest first) with Triggers / Reacts or Gives / Scales pages, Dude page
+  "Synergy Dudes" / "Synergy relics" ranked by channel rarity, relic page links per relic, roles derived from ability +
+  relics (relic-added sub-roles shown as "+"), Draft overlap scored by synergy edges. Taunt keeps the "takes damage" link.
 
 ## Open
-- [ ] NEXT SESSION (user, 2026-11-14): drop all keyword chips (Mechanics tab, relic / Family tags, shared mechanics,
-      draft overlap kw) and rebuild synergy measures from scratch. Reason: many [c:g] keywords are stat names that sit
-      next to a token value (Attack Power, Max HP...), not a real synergy signal; tokens now carry their numbers.
-      2026-11-14: data side done in the extract (synergy tagging v2, _hmd_extract/CONTEXT_MAP.md): facets per
-      effect, `synergy` edges ranked by channel rarity, derived roles. App still shows keyword chips until the user
-      picks how to thin the graph.
-- [ ] User review of roles (Role / Sub-Role / Tags); refactor as needed.
+- [ ] User review of derived roles and synergy edges in the app; refactor as needed.
 - [ ] Remaining 67 token numbers: constructor arguments fed from globals and a few tokens (speed, discount) outside the variables struct.

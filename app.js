@@ -1,7 +1,7 @@
 "use strict";
 /* How Many Dudes? Codex — data: window.HMD (tools/build_data.py). Mobile first. */
 
-const FEATURES = { roles: true, mechanics: true, draft: true };
+const FEATURES = { roles: true, synergy: true, draft: true };
 
 const H = window.HMD;
 const $ = (s) => document.querySelector(s);
@@ -11,7 +11,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const DUDE = Object.fromEntries(H.dudes.map((d) => [d.t, d]));
 const RELIC = Object.fromEntries(H.relics.map((r) => [r.id, r]));
 const FAM = Object.fromEntries(H.families.map((f) => [f.id, f]));
-const KW = Object.fromEntries(H.keywords.map((k) => [k.id, k]));
 const byName = (a, b) => (a.name || "").localeCompare(b.name || "");
 const dudesSorted = H.dudes.filter((d) => d.name).sort(byName);
 const relicsSorted = H.relics.slice().sort(byName);
@@ -21,26 +20,39 @@ const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
 const refsFrom = (key) => H.refs.filter((e) => e.a === key);
 const refsTo = (key) => H.refs.filter((e) => e.b === key);
 
-// Synergy keywords: used by at least two separate units. A unit is a Dude together with his own relics, or one
-// Family / universal / Promoter relic. A keyword only one unit uses (Burger: Chef + Chef relics) links nothing.
+// Synergy (extract tools/effect_tags.py): every effect carries facets [facet, channel, scope]; an edge joins a unit
+// that gives / triggers a channel with a unit that scales with / reacts to it. A unit is a Dude together with his own
+// relics, or one Family / universal / Promoter relic. Rare channels (Taunt, Block) weigh more than common ones.
 const unitOf = (x) => (x.t ? "dude:" + x.t : x.pool === "dude" ? "dude:" + x.dude : "relic:" + x.id);
-const KW_UNITS = {};
-for (const x of [...H.dudes, ...H.relics]) for (const k of x.kw) (KW_UNITS[k] = KW_UNITS[k] || new Set()).add(unitOf(x));
-const isSynergy = (k) => (KW_UNITS[k]?.size || 0) >= 2;
-const synKw = (x) => x.kw.filter(isSynergy);
+const CH = Object.fromEntries(H.chans.map((c) => [c.id, c]));
+const chWeight = (c) => CH[c]?.r || 0;
+const SYN = {};
+for (const [a, b, score, chs] of H.syn) {
+  (SYN[a] = SYN[a] || []).push({ u: b, score, chs });
+  (SYN[b] = SYN[b] || []).push({ u: a, score, chs });
+}
+const unitItem = (u) => itemOf(u);
+const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On", boosts: "Boosts" };
+// channels an effect touches that link to another unit (shown as chips; the facet verb says how)
+const fxShown = (x) => x.fx.filter(([, c]) => CH[c]);
+const fxLabel = ([f, c, s]) => `${FACET[f]} ${c}${s === "team" && f === "gives" ? " · team" : s === "enemy" ? " · enemy" : ""}`;
 
-// keyword rarity weight: shared rare mechanics count more than shared common stats
-const KW_DF = {};
-for (const x of [...H.dudes, ...H.relics]) for (const k of x.kw) KW_DF[k] = (KW_DF[k] || 0) + 1;
-const NDOCS = H.dudes.length + H.relics.length;
-const kwWeight = (k) => Math.log(NDOCS / (KW_DF[k] || 1));
+// roles derived from a Dude's ability + relics: [role, sub_role, n, fromAbility]
+const ROLES = ["Damage", "Tank", "Support", "Utility"];
+function mainRole(d) {
+  const sum = {};
+  const pool = d.roles.some((r) => r[3]) ? d.roles.filter((r) => r[3]) : d.roles;
+  for (const [r, , n] of pool) sum[r] = (sum[r] || 0) + n;
+  const top = Object.entries(sum).sort((a, b) => b[1] - a[1])[0];
+  if (!top) return null;
+  const sub = pool.filter((r) => r[0] === top[0]).sort((a, b) => b[2] - a[2])[0][1];
+  return { role: top[0], sub };
+}
+const hasRole = (d, r) => d.roles.some((x) => x[0] === r);
 
-// effect types: keywords that name an effect, not a target / rule term
-const NON_EFFECT = new Set(["Roster Dude", "Roster", "Team", "Direct Damage", "Cooldown", "HP", "Independent Stacking",
-  "Chained Effect", "Primary Target"]);
 function itemEffects(items, n) {
   const count = {};
-  for (const x of items) for (const k of synKw(x)) if (!NON_EFFECT.has(k)) count[k] = (count[k] || 0) + 1;
+  for (const x of items) for (const [, c] of fxShown(x)) count[c] = (count[c] || 0) + 1;
   return Object.entries(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n);
 }
 function familyEffects(f, n) {
@@ -55,23 +67,14 @@ function effectList(f, n, big) {
 function effectBars(eff, big) {
   const max = eff.length ? eff[0][1] : 0;
   return `<div class="effects${big ? " big" : ""}">${eff
-    .map(([k, v]) => `<span class="eff"${big ? ` data-open="kw:${encodeURIComponent(k)}"` : ""}>${esc(k)}${bar(v, max)}</span>`)
+    .map(([k, v]) => `<span class="eff"${big ? ` data-open="ch:${encodeURIComponent(k)}"` : ""}>${esc(k)}${bar(v, max)}</span>`)
     .join("")}</div>`;
 }
 
-function sharedMechanics(kw, pool, selfKey, limit) {
-  const mine = new Set(kw.filter(isSynergy));
-  const scored = [];
-  for (const x of pool) {
-    const key = x.t ? "dude:" + x.t : "relic:" + x.id;
-    if (key === selfKey) continue;
-    const shared = synKw(x).filter((k) => mine.has(k));
-    if (!shared.length) continue;
-    const score = shared.reduce((s, k) => s + kwWeight(k), 0);
-    scored.push({ x, shared: shared.sort((a, b) => kwWeight(b) - kwWeight(a)), score });
-  }
-  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
-}
+// partner units of a unit (Dudes or standalone relics), strongest first, each with the channels that join them
+const partners = (u, kind, limit) =>
+  (SYN[u] || []).filter((p) => p.u.startsWith(kind + ":")).slice(0, limit);
+const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "));
 
 /* ---------- art + chips (all game art goes through these) ---------- */
 const img = (src, alt, cls = "") => (src ? `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="96" height="96">` : "");
@@ -83,8 +86,12 @@ const poolIcon = (r) =>
 
 const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t}">${img(DUDE[t].icon, DUDE[t].name)}${esc(DUDE[t].name)}</button>` : "");
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
-const kwChip = (k) => `<button class="chiplink kw" data-open="kw:${encodeURIComponent(k)}">${esc(k)}</button>`;
-const roleBadge = (d) => (FEATURES.roles && d.role ? `<span class="badge ${esc(d.role.role)}">${esc(d.role.role)}</span>` : "");
+const fxChip = (f) => `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(f[1])}">${esc(fxLabel(f))}</button>`;
+const fxLine = (x) => (fxShown(x).length ? `<div class="chipline">${fxShown(x).map(fxChip).join("")}</div>` : "");
+const roleBadge = (d) => {
+  const m = FEATURES.roles && mainRole(d);
+  return m ? `<span class="badge ${esc(m.role)}">${esc(m.role)}</span>` : "";
+};
 
 function mini(x, sub) {
   const key = x.t ? "dude:" + x.t : "relic:" + x.id;
@@ -99,8 +106,7 @@ function renderSegs(seg) {
   return seg
     .map(([kind, a, b, c]) => {
       if (kind === "t") return esc(a);
-      if (kind === "k")
-        return isSynergy(a) ? `<span class="k" data-open="kw:${encodeURIComponent(a)}">${esc(b)}</span>` : `<span class="k solo">${esc(b)}</span>`;
+      if (kind === "k") return `<span class="k solo">${esc(b)}</span>`;
       if (kind === "d") return `<span class="d" data-open="dude:${a}">${esc(b)}</span>`;
       if (kind === "u") return `<span class="u">${esc(a)}</span>`;
       if (kind === "v")
@@ -116,7 +122,7 @@ const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</di
 const TABS = [
   { id: "families", name: "Families" },
   { id: "search", name: "Search" },
-  ...(FEATURES.mechanics ? [{ id: "mechanics", name: "Mechanics" }] : []),
+  ...(FEATURES.synergy ? [{ id: "synergy", name: "Synergies" }] : []),
   ...(FEATURES.draft ? [{ id: "draft", name: "Draft" }] : []),
 ];
 const state = { tab: "families", q: "", kind: null, fam: null, role: null, pool: null };
@@ -141,7 +147,7 @@ function renderControls() {
   if (state.tab === "search") {
     html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"]], state.kind);
     html += filterChips("fam", famOpts, state.fam);
-    if (state.kind === "dude" && FEATURES.roles) html += filterChips("role", ["Damage", "Tank", "Support", "Utility"].map((r) => [r, r]), state.role);
+    if (state.kind === "dude" && FEATURES.roles) html += filterChips("role", ROLES.map((r) => [r, r]), state.role);
     if (state.kind === "relic")
       html += filterChips("pool", [["dude", "Dude"], ["family", "Family"], ["universal", "Universal"], ["promoter", "Promoter"]], state.pool);
   }
@@ -157,7 +163,7 @@ function renderList() {
   if (state.tab === "draft") return void ($("#list").innerHTML = renderDraft());
   if (state.tab === "search") {
     const ds = state.kind === "relic" ? [] : dudesSorted
-      .filter((d) => (!state.fam || d.fam.includes(state.fam)) && (!state.role || d.role?.role === state.role))
+      .filter((d) => (!state.fam || d.fam.includes(state.fam)) && (!state.role || hasRole(d, state.role)))
       .filter((d) => match(q, d.name, d.ab, segText(d.seg)));
     const rs = state.kind === "dude" ? [] : relicsSorted
       .filter((r) => (!state.fam || r.fam === state.fam) && (!state.pool || r.pool === state.pool))
@@ -173,9 +179,11 @@ function renderList() {
     $("#list").innerHTML = cards.length ? `<div class="famgrid">${cards.join("")}</div>` : `<div class="empty">No matches</div>`;
     return;
   } else {
-    rows = H.keywords
-      .filter((k) => isSynergy(k.id) && match(q, k.id))
-      .map((k) => `<button class="row" data-open="kw:${encodeURIComponent(k.id)}"><span class="main"><span class="name">${esc(k.id)}</span></span></button>`);
+    // channels that join two or more units, rarest first
+    const shown = H.chans.filter((c) => new Set([...c.prov, ...c.use].map((k) => unitOf(itemOf(k)))).size > 1 && match(q, c.id));
+    rows = shown
+      .sort((a, b) => b.r - a.r || a.id.localeCompare(b.id))
+      .map((c) => `<button class="row" data-open="ch:${encodeURIComponent(c.id)}"><span class="main"><span class="name">${esc(c.id)}</span></span></button>`);
   }
   $("#list").innerHTML = rows.join("") || `<div class="empty">No matches</div>`;
 }
@@ -185,7 +193,7 @@ function itemRow(x, attr) {
   const a = attr || `data-open="${keyOf(x)}"`;
   return x.t
     ? `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
-        <span class="sub">${esc(x.ab || "")}${FEATURES.roles && x.role ? " · " + esc(x.role.sub_role) : ""}</span></span>
+        <span class="sub">${esc(x.ab || "")}${FEATURES.roles && mainRole(x) ? " · " + esc(mainRole(x).sub) : ""}</span></span>
         <span class="tail">${roleBadge(x)}${x.fam.map(famIcon).join("")}</span></button>`
     : `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
         <span class="sub">${esc(poolLabel(x) || "")}</span></span><span class="tail">${poolIcon(x)}</span></button>`;
@@ -212,11 +220,11 @@ const saveDraft = () => {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage off */ }
 };
 
-// what an offer shares with the build: game Family, its relic pool, names / owned relics, synergy mechanics
+// what an offer shares with the build: game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
-  const out = { fam: [], links: [], kw: [], score: 0 };
+  const out = { fam: [], links: [], ch: [], score: 0 };
   const famCount = (f) => dudes.filter((b) => b.fam.includes(f)).length;
   if (x.t) {
     for (const f of x.fam) if (f !== "global" && famCount(f)) out.fam.push([f, famCount(f)]);
@@ -229,11 +237,18 @@ function overlap(x, build) {
     const other = e.a === k ? e.b : e.b === k ? e.a : null;
     if (other && build.includes(other) && !out.links.includes(itemOf(other))) out.links.push(itemOf(other));
   }
-  const have = new Set(items.flatMap(synKw));
-  out.kw = synKw(x).filter((w) => have.has(w)).sort((a, b) => kwWeight(b) - kwWeight(a));
-  out.score = out.kw.reduce((s, w) => s + kwWeight(w), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  // synergy: the offer's own effect links (a relic) or its unit's edges (a Dude) into the units already in the build
+  const mine = unitOf(x);
+  const inBuild = new Set(items.map(unitOf));
+  inBuild.delete(mine);
+  const chs = new Set();
+  const lk = x.t ? (SYN[mine] || []).map((p) => [p.u, p.score, p.chs]) : H.links[k] || [];
+  for (const [u, , cs] of lk) if (inBuild.has(u)) cs.forEach((c) => chs.add(c));
+  out.ch = [...chs].sort((a, b) => chWeight(b) - chWeight(a));
+  out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   return out;
 }
+const chChip = (c) => `<button class="chiplink kw" data-open="ch:${encodeURIComponent(c)}">${esc(c)}</button>`;
 
 function slotHtml(i, best, max) {
   const key = draft.slots[i];
@@ -247,7 +262,7 @@ function slotHtml(i, best, max) {
   const ov = [
     ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
     ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
-    ...o.kw.map(kwChip),
+    ...o.ch.map(chChip),
   ];
   return `<div class="slot${o.score === best ? " best" : ""}">
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span></button>
@@ -298,9 +313,8 @@ function offer(key) {
 /* ---------- detail views ---------- */
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
-  const kws = synKw(r);
   return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span></button>
-    <div class="rdesc">${renderSegs(r.seg)}</div>${kws.length ? `<div class="chipline">${kws.map(kwChip).join("")}</div>` : ""}</div>`;
+    <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
 // draft action in the detail sheet's header bar (Dude and relic pages)
@@ -314,8 +328,12 @@ function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
   const key = "dude:" + t;
-  const role = FEATURES.roles && d.role
-    ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(d.role.sub_role)}</span></div><div class="tags">${d.role.tags.map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div></div>`
+  // roles from his ability (solid) and the ones his relics add (+)
+  const m = mainRole(d);
+  const role = FEATURES.roles && m
+    ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(m.sub)}</span></div><div class="tags">${d.roles
+      .map(([r, s, , ab]) => `<span class="tag ${esc(r)}${ab ? "" : " plus"}">${ab ? "" : "+ "}${esc(s)}</span>`)
+      .join("")}</div></div>`
     : "";
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
@@ -325,18 +343,17 @@ function dudeView(t) {
     .map(([k, id]) => (k === "dude" ? DUDE[id] : RELIC[id]))
     .filter((x) => x && !(x.id && x.dude === t))
     .map((x) => mini(x, x.id ? esc(poolLabel(x)) : ""));
-  const shared = FEATURES.mechanics
-    ? sharedMechanics(d.kw, H.dudes, key, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
-    : [];
+  const syn = FEATURES.synergy;
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
     ${role}
-    ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}</div>` : ""}
+    ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
+    ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
+    ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
     ${section("Relics", relicCards(relicsOfDude(t)))}
     ${section("Family relics", famRelics ? `<div class="chipline">${famRelics}</div>` : "")}
     ${section("Family", grid(mates))}
     ${section("Names", grid(out))}
-    ${section("Named by", grid(inbound))}
-    ${section("Shared mechanics", grid(shared))}`;
+    ${section("Named by", grid(inbound))}`;
 }
 
 function relicView(id) {
@@ -345,15 +362,13 @@ function relicView(id) {
   const key = "relic:" + id;
   const pool = r.pool === "dude" ? dudeChip(r.dude) + famChip(r.fam) : r.pool === "family" ? famChip(r.fam) : `<span class="badge">${esc(poolLabel(r))}</span>${famChip(r.fam)}`;
   const refs = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x] && x !== r.dude).map((x) => mini(DUDE[x]));
-  const kws = synKw(r).length ? `<div class="chipline">${synKw(r).map(kwChip).join("")}</div>` : "";
-  const shared = FEATURES.mechanics
-    ? sharedMechanics(r.kw, H.dudes, null, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
-    : [];
+  // this relic's own effect links (not his owner's whole kit)
+  const linked = (H.links[key] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
+  const syn = FEATURES.synergy;
   return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}</div></div></div>
-    <div class="desc">${renderSegs(r.seg)}</div>
-    ${section("Names", grid(refs))}
-    ${FEATURES.mechanics ? section("Mechanics", kws) : ""}
-    ${section("Dudes sharing mechanics", grid(shared))}`;
+    <div class="desc">${renderSegs(r.seg)}${syn ? fxLine(r) : ""}</div>
+    ${syn ? section("Synergies", grid(linked)) : ""}
+    ${section("Names", grid(refs))}`;
 }
 
 function familyView(f) {
@@ -367,24 +382,30 @@ function familyView(f) {
   return `<div class="hero">${img(fam.icon, fam.name)}<div><h2>${esc(fam.full)}</h2></div></div>
     ${fam.desc ? `<p class="prose">${esc(fam.desc)}</p>` : ""}
     ${section("Common effects", effectList(f, 8, true))}
-    ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && d.role ? esc(d.role.role + " · " + d.role.sub_role) : ""))))}
+    ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && mainRole(d) ? esc(mainRole(d).role + " · " + mainRole(d).sub) : ""))))}
     ${section("Family relics", relicCards(relicsOfFamilyPool(f)))}
     ${perDude}`;
 }
 
-function kwView(k) {
-  if (!KW[k]) return null;
-  const ds = dudesSorted.filter((d) => d.kw.includes(k)).map((d) => mini(d));
-  const rs = relicsSorted.filter((r) => r.kw.includes(k)).map((r) => mini(r, esc(poolLabel(r) || "")));
-  return `<div class="hero"><div><h2>${esc(k)}</h2></div></div>${section("Dudes", grid(ds))}${section("Relics", grid(rs))}`;
+// a channel: the effects that give / trigger it and the effects that scale with / react to it
+function chView(c) {
+  const ch = CH[c];
+  if (!ch) return null;
+  const side = (keys) => {
+    const xs = keys.map(itemOf).filter(Boolean).sort(byName);
+    return grid(xs.map((x) => mini(x, x.t ? "" : esc(poolLabel(x) || ""))));
+  };
+  return `<div class="hero"><div><h2>${esc(c)}</h2></div></div>
+    ${section(ch.stat ? "Gives" : "Triggers", side(ch.prov))}
+    ${section(ch.stat ? "Scales with it" : "Reacts to it", side(ch.use))}`;
 }
 
-const VIEWS = { dude: dudeView, relic: relicView, family: familyView, kw: kwView };
+const VIEWS = { dude: dudeView, relic: relicView, family: familyView, ch: chView };
 
 /* ---------- routing: #tab or #kind:id (overlay) ---------- */
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  const m = h.match(/^(dude|relic|family|kw):(.+)$/);
+  const m = h.match(/^(dude|relic|family|ch):(.+)$/);
   if (m) {
     const html = VIEWS[m[1]](m[2]);
     if (html) {

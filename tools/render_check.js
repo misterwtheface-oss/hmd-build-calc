@@ -63,7 +63,7 @@ if (!overlap(H.relics.find((r) => r.id === "r_jump_shoes"), ["dude:basketball"])
 for (const d of H.dudes) tryRender(`dude ${d.t}`, () => VIEWS.dude(d.t));
 for (const r of H.relics) tryRender(`relic ${r.id}`, () => VIEWS.relic(r.id));
 for (const f of H.families) tryRender(`family ${f.id}`, () => VIEWS.family(f.id));
-for (const k of H.keywords) tryRender(`kw ${k.id}`, () => VIEWS.kw(k.id));
+for (const c of H.chans) tryRender(`ch ${c.id}`, () => VIEWS.ch(c.id));
 
 if (problems.length) {
   console.log(problems.slice(0, 40).join("\n"));
