@@ -2,6 +2,7 @@
 
 Reference for How Many Dudes?: every Dude, Relic, Family and mechanic, with the game's own art, and the links between
 them (Family membership, Dude / Family relic pools, shared mechanics, Dudes and relics that name each other).
+Draft: preview up to 3 offers against a saved build and see where they overlap.
 Mobile first.
 
 Live: https://misterwtheface-oss.github.io/hmd-build-calc/

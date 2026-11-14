@@ -1,7 +1,7 @@
 "use strict";
 /* How Many Dudes? Codex — data: window.HMD (tools/build_data.py). Mobile first. */
 
-const FEATURES = { roles: true, mechanics: true };
+const FEATURES = { roles: true, mechanics: true, draft: true };
 
 const H = window.HMD;
 const $ = (s) => document.querySelector(s);
@@ -38,17 +38,21 @@ const kwWeight = (k) => Math.log(NDOCS / (KW_DF[k] || 1));
 // effect types: keywords that name an effect, not a target / rule term
 const NON_EFFECT = new Set(["Roster Dude", "Roster", "Team", "Direct Damage", "Cooldown", "HP", "Independent Stacking",
   "Chained Effect", "Primary Target"]);
-function familyEffects(f, n) {
+function itemEffects(items, n) {
   const count = {};
-  const members = membersOf(f).map((d) => d.t);
-  const items = [...membersOf(f), ...H.relics.filter((r) => r.fam === f || members.includes(r.dude))];
   for (const x of items) for (const k of synKw(x)) if (!NON_EFFECT.has(k)) count[k] = (count[k] || 0) + 1;
   return Object.entries(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n);
+}
+function familyEffects(f, n) {
+  const members = membersOf(f).map((d) => d.t);
+  return itemEffects([...membersOf(f), ...H.relics.filter((r) => r.fam === f || members.includes(r.dude))], n);
 }
 // magnitude bar: share of the largest value of this field among the shown entries (rule A-magnitude-bars)
 const bar = (v, max) => `<span class="bar"><i style="width:${max ? Math.round((100 * v) / max) : 0}%"></i></span>`;
 function effectList(f, n, big) {
-  const eff = familyEffects(f, n);
+  return effectBars(familyEffects(f, n), big);
+}
+function effectBars(eff, big) {
   const max = eff.length ? eff[0][1] : 0;
   return `<div class="effects${big ? " big" : ""}">${eff
     .map(([k, v]) => `<span class="eff"${big ? ` data-open="kw:${encodeURIComponent(k)}"` : ""}>${esc(k)}${bar(v, max)}</span>`)
@@ -111,11 +115,11 @@ const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</di
 /* ---------- tabs ---------- */
 const TABS = [
   { id: "families", name: "Families" },
-  { id: "dudes", name: "Dudes" },
-  { id: "relics", name: "Relics" },
+  { id: "search", name: "Search" },
   ...(FEATURES.mechanics ? [{ id: "mechanics", name: "Mechanics" }] : []),
+  ...(FEATURES.draft ? [{ id: "draft", name: "Draft" }] : []),
 ];
-const state = { tab: "families", q: "", fam: null, role: null, pool: null };
+const state = { tab: "families", q: "", kind: null, fam: null, role: null, pool: null };
 const scrollMemo = {};
 
 function renderTabs() {
@@ -132,11 +136,15 @@ function filterChips(kind, options, current) {
 
 function renderControls() {
   const famOpts = H.families.map((f) => [f.id, f.name, famIcon(f.id)]);
+  if (state.tab === "draft") return void ($("#controls").innerHTML = "");
   let html = `<input id="q" class="search" type="search" placeholder="Search" value="${esc(state.q)}" autocomplete="off">`;
-  if (state.tab === "dudes" || state.tab === "relics") html += filterChips("fam", famOpts, state.fam);
-  if (state.tab === "dudes" && FEATURES.roles) html += filterChips("role", ["Damage", "Tank", "Support", "Utility"].map((r) => [r, r]), state.role);
-  if (state.tab === "relics")
-    html += filterChips("pool", [["dude", "Dude"], ["family", "Family"], ["universal", "Universal"], ["promoter", "Promoter"]], state.pool);
+  if (state.tab === "search") {
+    html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"]], state.kind);
+    html += filterChips("fam", famOpts, state.fam);
+    if (state.kind === "dude" && FEATURES.roles) html += filterChips("role", ["Damage", "Tank", "Support", "Utility"].map((r) => [r, r]), state.role);
+    if (state.kind === "relic")
+      html += filterChips("pool", [["dude", "Dude"], ["family", "Family"], ["universal", "Universal"], ["promoter", "Promoter"]], state.pool);
+  }
   $("#controls").innerHTML = html;
 }
 
@@ -146,23 +154,15 @@ const segText = (seg) => seg.map((s) => (s[0] === "v" ? (s[3] != null ? fmtVal(s
 function renderList() {
   const q = state.q.trim().toLowerCase();
   let rows = [];
-  if (state.tab === "dudes") {
-    rows = dudesSorted
+  if (state.tab === "draft") return void ($("#list").innerHTML = renderDraft());
+  if (state.tab === "search") {
+    const ds = state.kind === "relic" ? [] : dudesSorted
       .filter((d) => (!state.fam || d.fam.includes(state.fam)) && (!state.role || d.role?.role === state.role))
-      .filter((d) => match(q, d.name, d.ab, segText(d.seg)))
-      .map(
-        (d) => `<button class="row" data-open="dude:${d.t}">${img(d.icon, d.name, "ic")}<span class="main"><span class="name">${esc(d.name)}</span>
-        <span class="sub">${esc(d.ab || "")}${FEATURES.roles && d.role ? " · " + esc(d.role.sub_role) : ""}</span></span>
-        <span class="tail">${roleBadge(d)}${d.fam.map(famIcon).join("")}</span></button>`
-      );
-  } else if (state.tab === "relics") {
-    rows = relicsSorted
+      .filter((d) => match(q, d.name, d.ab, segText(d.seg)));
+    const rs = state.kind === "dude" ? [] : relicsSorted
       .filter((r) => (!state.fam || r.fam === state.fam) && (!state.pool || r.pool === state.pool))
-      .filter((r) => match(q, r.name, segText(r.seg), poolLabel(r)))
-      .map(
-        (r) => `<button class="row" data-open="relic:${r.id}">${img(r.icon, r.name, "ic")}<span class="main"><span class="name">${esc(r.name)}</span>
-        <span class="sub">${esc(poolLabel(r) || "")}</span></span><span class="tail">${poolIcon(r)}</span></button>`
-      );
+      .filter((r) => match(q, r.name, segText(r.seg), poolLabel(r)));
+    rows = [...ds, ...rs].map((x) => itemRow(x));
   } else if (state.tab === "families") {
     const cards = H.families
       .filter((f) => match(q, f.name, f.desc, ...membersOf(f.id).map((d) => d.name)))
@@ -180,6 +180,112 @@ function renderList() {
   $("#list").innerHTML = rows.join("") || `<div class="empty">No matches</div>`;
 }
 
+// one list row for a Dude or a relic; attr = what a tap does (open its page by default)
+function itemRow(x, attr) {
+  const a = attr || `data-open="${keyOf(x)}"`;
+  return x.t
+    ? `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
+        <span class="sub">${esc(x.ab || "")}${FEATURES.roles && x.role ? " · " + esc(x.role.sub_role) : ""}</span></span>
+        <span class="tail">${roleBadge(x)}${x.fam.map(famIcon).join("")}</span></button>`
+    : `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
+        <span class="sub">${esc(poolLabel(x) || "")}</span></span><span class="tail">${poolIcon(x)}</span></button>`;
+}
+
+/* ---------- draft: up to 3 offers (as the game presents them) scored against the saved build ---------- */
+const keyOf = (x) => (x.t ? "dude:" + x.t : "relic:" + x.id);
+const itemOf = (key) => {
+  const [k, id] = key.split(":");
+  return k === "dude" ? DUDE[id] : RELIC[id];
+};
+const SLOTS = 3;
+const DRAFT_KEY = "hmd.draft";
+const draft = (() => {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(DRAFT_KEY)); } catch (e) { /* no saved draft */ }
+  const ok = (k) => typeof k === "string" && !!itemOf(k);
+  return {
+    build: Array.isArray(d?.build) ? d.build.filter(ok) : [],
+    slots: Array.from({ length: SLOTS }, (_, i) => (ok(d?.slots?.[i]) ? d.slots[i] : null)),
+  };
+})();
+const saveDraft = () => {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage off */ }
+};
+
+// what an offer shares with the build: game Family, its relic pool, names / owned relics, synergy mechanics
+function overlap(x, build) {
+  const items = build.map(itemOf);
+  const dudes = items.filter((b) => b.t);
+  const out = { fam: [], links: [], kw: [], score: 0 };
+  const famCount = (f) => dudes.filter((b) => b.fam.includes(f)).length;
+  if (x.t) {
+    for (const f of x.fam) if (f !== "global" && famCount(f)) out.fam.push([f, famCount(f)]);
+    for (const b of items) if (b.id && b.dude === x.t && !out.links.includes(b)) out.links.push(b);
+  } else if (x.pool === "dude") {
+    if (DUDE[x.dude] && dudes.includes(DUDE[x.dude])) out.links.push(DUDE[x.dude]);
+  } else if (x.pool === "family" && famCount(x.fam)) out.fam.push([x.fam, famCount(x.fam)]);
+  const k = keyOf(x);
+  for (const e of H.refs) {
+    const other = e.a === k ? e.b : e.b === k ? e.a : null;
+    if (other && build.includes(other) && !out.links.includes(itemOf(other))) out.links.push(itemOf(other));
+  }
+  const have = new Set(items.flatMap(synKw));
+  out.kw = synKw(x).filter((w) => have.has(w)).sort((a, b) => kwWeight(b) - kwWeight(a));
+  out.score = out.kw.reduce((s, w) => s + kwWeight(w), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  return out;
+}
+
+function slotHtml(i, best, max) {
+  const key = draft.slots[i];
+  if (!key)
+    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude or relic" autocomplete="off">
+      <div class="picks" id="picks-${i}"></div></div>`;
+  const x = itemOf(key);
+  const o = overlap(x, draft.build);
+  const label = x.t ? x.fam.map(famIcon).join("") : poolIcon(x);
+  const text = (x.ab ? `<div class="ab">${esc(x.ab)}</div>` : "") + renderSegs(x.seg);
+  const ov = [
+    ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
+    ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
+    ...o.kw.map(kwChip),
+  ];
+  return `<div class="slot${o.score === best ? " best" : ""}">
+    <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span></button>
+      <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
+    <div class="rdesc">${text}</div>
+    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}</div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}` : ""}
+    <button class="take" data-take="${i}">Take</button></div>`;
+}
+
+function renderDraft() {
+  const scores = draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build).score : -1));
+  const max = Math.max(0, ...scores);
+  const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
+  const counts = {};
+  for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
+  const tiles = Object.keys(counts).map(
+    (k) => `<div class="btile">${mini(itemOf(k), counts[k] > 1 ? "×" + counts[k] : "")}<button class="x" data-unbuild="${k}" aria-label="Remove">×</button></div>`
+  );
+  const items = draft.build.map(itemOf);
+  return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>
+    <h3>Build</h3>${tiles.length
+      ? `<div class="grid">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
+        <button class="clear" data-clearbuild="1">Clear build</button>`
+      : `<div class="empty">Take an offer to start a build</div>`}`;
+}
+
+function pickResults(i, q) {
+  q = q.trim().toLowerCase();
+  if (!q) return "";
+  const hits = [...dudesSorted, ...relicsSorted].filter((x) => match(q, x.name)).slice(0, 8);
+  return hits.map((x) => itemRow(x, `data-pick="${i}|${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
+}
+
+function offer(key) {
+  const i = draft.slots.indexOf(null);
+  draft.slots[i < 0 ? SLOTS - 1 : i] = key;
+}
+
 /* ---------- detail views ---------- */
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
@@ -188,6 +294,7 @@ function relicCard(r) {
     <div class="rdesc">${renderSegs(r.seg)}</div>${kws.length ? `<div class="chipline">${kws.map(kwChip).join("")}</div>` : ""}</div>`;
 }
 
+const offerBtn = (key) => (FEATURES.draft ? `<button class="offer" data-offer="${key}">+ Draft</button>` : "");
 const relicCards = (rs) => (rs.length ? `<div class="rcards">${rs.map(relicCard).join("")}</div>` : "");
 
 function dudeView(t) {
@@ -208,7 +315,7 @@ function dudeView(t) {
   const shared = FEATURES.mechanics
     ? sharedMechanics(d.kw, H.dudes, key, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
     : [];
-  return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
+  return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}${offerBtn(key)}</div></div></div>
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}</div>` : ""}
     ${section("Relics", relicCards(relicsOfDude(t)))}
@@ -229,7 +336,7 @@ function relicView(id) {
   const shared = FEATURES.mechanics
     ? sharedMechanics(r.kw, H.dudes, null, 8).map((s) => mini(s.x, s.shared.slice(0, 3).map(esc).join(" · ")))
     : [];
-  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}</div></div></div>
+  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}${offerBtn(key)}</div></div></div>
     <div class="desc">${renderSegs(r.seg)}</div>
     ${section("Names", grid(refs))}
     ${FEATURES.mechanics ? section("Mechanics", kws) : ""}
@@ -297,7 +404,7 @@ function switchTab(id) {
   scrollMemo[state.tab] = window.scrollY;
   state.tab = id;
   state.q = "";
-  state.fam = state.role = state.pool = null;
+  state.kind = state.fam = state.role = state.pool = null;
   renderTabs();
   renderControls();
   renderList();
@@ -322,6 +429,31 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer]");
+  if (dr) {
+    const ds = dr.dataset;
+    if (ds.pick) {
+      const [i, key] = ds.pick.split("|");
+      draft.slots[+i] = key;
+    } else if (ds.take) {
+      draft.build.push(draft.slots[+ds.take]);
+      draft.slots.fill(null);
+    } else if (ds.unslot) draft.slots[+ds.unslot] = null;
+    else if (ds.unbuild) draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
+    else if (ds.clearbuild) draft.build.length = 0;
+    else if (ds.offer) {
+      offer(ds.offer);
+      dr.textContent = "Added";
+      dr.disabled = true;
+    }
+    saveDraft();
+    if (state.tab === "draft") {
+      const y = window.scrollY;
+      renderList();
+      window.scrollTo(0, y);
+    }
+    return;
+  }
   const o = e.target.closest("[data-open]");
   if (o) {
     open(decodeURIComponent(o.dataset.open));
@@ -339,6 +471,10 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("input", (e) => {
+  if (e.target.dataset.slot != null) {
+    $("#picks-" + e.target.dataset.slot).innerHTML = pickResults(+e.target.dataset.slot, e.target.value);
+    return;
+  }
   if (e.target.id !== "q") return;
   state.q = e.target.value;
   renderList();

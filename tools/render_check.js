@@ -9,14 +9,15 @@ const APP = path.join(__dirname, "..");
 const el = () => ({ innerHTML: "", dataset: {}, scrollTop: 0, classList: { add() {}, remove() {}, contains() { return true; } },
   setAttribute() {}, style: {}, closest() { return null; } });
 const els = {};
-const ctx = { window: {}, console, location: { hash: "" }, history: { replaceState() {}, back() {} }, scrollY: 0, scrollTo() {},
+const store = {};
+const ctx = { window: {}, console, localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } }, location: { hash: "" }, history: { replaceState() {}, back() {} }, scrollY: 0, scrollTo() {},
   addEventListener() {}, encodeURIComponent, decodeURIComponent,
   document: { querySelector: (s) => els[s] || (els[s] = el()), addEventListener() {}, body: { style: {} } } };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(APP, "data.js"), "utf8"), ctx);
 const app = fs.readFileSync(path.join(APP, "app.js"), "utf8").replace('"use strict";', "");
-vm.runInContext(app + "\n;globalThis.__app = { VIEWS, TABS, state, H, renderControls, renderList };", ctx);
-const { VIEWS, TABS, state, H, renderControls, renderList } = ctx.__app;
+vm.runInContext(app + "\n;globalThis.__app = { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf };", ctx);
+const { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf } = ctx.__app;
 
 const icons = new Set(fs.readdirSync(path.join(APP, "assets", "icons")));
 const problems = [];
@@ -35,14 +36,30 @@ function tryRender(where, fn) {
 const famIds = H.families.map((f) => f.id);
 for (const t of TABS) {
   const combos = [{}];
-  if (t.id === "dudes" || t.id === "relics") famIds.forEach((f) => combos.push({ fam: f }));
-  if (t.id === "dudes") ["Damage", "Tank", "Support", "Utility"].forEach((r) => combos.push({ role: r }));
-  if (t.id === "relics") ["dude", "family", "universal", "promoter"].forEach((p) => combos.push({ pool: p }));
+  if (t.id === "search") {
+    ["dude", "relic"].forEach((k) => combos.push({ kind: k }));
+    famIds.forEach((f) => combos.push({ fam: f }));
+    ["Damage", "Tank", "Support", "Utility"].forEach((r) => combos.push({ kind: "dude", role: r }));
+    ["dude", "family", "universal", "promoter"].forEach((p) => combos.push({ kind: "relic", pool: p }));
+  }
   for (const c of combos) {
-    Object.assign(state, { tab: t.id, q: "", fam: null, role: null, pool: null }, c);
+    Object.assign(state, { tab: t.id, q: "", kind: null, fam: null, role: null, pool: null }, c);
     tryRender(`list ${t.id} ${JSON.stringify(c)}`, () => { renderControls(); renderList(); return els["#list"].innerHTML + els["#controls"].innerHTML; });
   }
 }
+// draft: every Dude and relic as an offer, against an empty build and against a mixed build
+const all = [...H.dudes.filter((d) => d.name), ...H.relics].map(keyOf);
+state.tab = "draft";
+for (const build of [[], ["dude:basketball", "dude:basketball", "relic:r_jump_shoes", "dude:coach", "relic:ancient_sword"]]) {
+  draft.build.splice(0, draft.build.length, ...build);
+  for (let i = 0; i < all.length; i += 3) {
+    draft.slots.splice(0, 3, all[i] || null, all[i + 1] || null, all[i + 2] || null);
+    tryRender(`draft ${build.length} ${all[i]}`, () => { renderList(); return els["#list"].innerHTML; });
+  }
+}
+draft.slots.splice(0, 3, null, null, null);
+tryRender("draft empty slots", () => { renderList(); return els["#list"].innerHTML + pickResults(0, "dude"); });
+if (!overlap(H.relics.find((r) => r.id === "r_jump_shoes"), ["dude:basketball"]).links.length) problems.push("draft: Jump Shoes not linked to Basketball Dude");
 for (const d of H.dudes) tryRender(`dude ${d.t}`, () => VIEWS.dude(d.t));
 for (const r of H.relics) tryRender(`relic ${r.id}`, () => VIEWS.relic(r.id));
 for (const f of H.families) tryRender(`family ${f.id}`, () => VIEWS.family(f.id));

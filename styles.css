@@ -112,7 +112,7 @@ main { padding: 10px 12px 24px; max-width: 900px; margin: 0 auto; }
 .hero h2 { margin: 0 0 6px; font: 28px/1.05 var(--title); color: var(--mustard); }
 .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .desc { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin: 8px 0; }
-.desc .ab { font: 18px var(--narrow); color: var(--mustard); margin-bottom: 4px; }
+.desc .ab, .slot .ab { font: 18px var(--narrow); color: var(--mustard); margin-bottom: 4px; }
 .k { color: var(--teal); font-weight: 600; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 .k.solo { cursor: default; text-decoration: none; }
 .d { color: var(--brick); font-weight: 600; cursor: pointer; }
@@ -140,6 +140,33 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 }
 .rhead img { width: 36px; height: 36px; flex: 0 0 36px; }
 .rdesc { margin: 6px 0 8px; }
+/* Draft: offers + build */
+.slots { display: flex; flex-direction: column; gap: 8px; }
+.slot { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px 10px; min-width: 0; }
+.slot.best { border-color: var(--mustard); box-shadow: 0 0 0 1px var(--mustard); }
+.slot.empty { padding: 8px; }
+.picks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.shead { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.shead .rhead { flex: 1 1 auto; width: auto; }
+.slabel { display: flex; gap: 3px; flex: 0 0 auto; }
+.slabel img { width: 22px; height: 22px; }
+.x {
+  flex: 0 0 auto; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel2); cursor: pointer; font-size: 18px; line-height: 1; color: var(--cream);
+}
+.ovl { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 6px; font: 14px var(--narrow); color: var(--olive); }
+.ovl .bar { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
+.ovl .bar i { display: block; height: 100%; background: var(--mustard); border-radius: 3px; }
+.take, .clear, .offer {
+  border: 0; border-radius: 8px; cursor: pointer; font: 16px var(--narrow); padding: 8px 14px;
+}
+.take { width: 100%; margin-top: 8px; background: var(--scarlet); color: var(--cream); }
+.clear { margin-top: 12px; background: var(--panel2); border: 1px solid var(--line); }
+.offer { padding: 3px 10px; font-size: 14px; background: var(--scarlet); color: var(--cream); border-radius: 999px; }
+.offer:disabled { background: var(--panel2); color: var(--olive); }
+.btile { position: relative; min-width: 0; }
+.btile .mini { padding-right: 40px; }
+.btile .x { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 28px; height: 28px; }
 .chipline { display: flex; flex-wrap: wrap; gap: 6px; }
 .chiplink {
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; max-width: 100%;
