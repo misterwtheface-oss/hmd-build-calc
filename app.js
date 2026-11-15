@@ -227,7 +227,7 @@ const saveDraft = () => {
 function overlap(x, build) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
-  const out = { fam: [], links: [], ch: [], score: 0 };
+  const out = { fam: [], links: [], ch: [], score: 0, pool: [], poolScore: 0 };
   const famCount = (f) => dudes.filter((b) => b.fam.includes(f)).length;
   if (x.t) {
     for (const f of x.fam) if (f !== "global" && famCount(f)) out.fam.push([f, famCount(f)]);
@@ -249,11 +249,26 @@ function overlap(x, build) {
   for (const [u, , cs] of lk) if (inBuild.has(u)) cs.forEach((c) => chs.add(c));
   out.ch = [...chs].sort((a, b) => chWeight(b) - chWeight(a));
   out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  // first Dude of a Family: the Family relics he unlocks, scored against the build plus himself
+  if (x.t) {
+    const reach = new Set([...inBuild, mine]);
+    for (const f of x.fam) {
+      if (f === "global" || famCount(f)) continue;
+      for (const r of relicsOfFamilyPool(f)) {
+        const rc = new Set();
+        for (const [u, , cs] of H.links["relic:" + r.id] || []) if (reach.has(u)) cs.forEach((c) => rc.add(c));
+        const sc = [...rc].reduce((s, c) => s + chWeight(c), 0);
+        if (sc) out.pool.push({ r, f, sc });
+      }
+    }
+    out.pool.sort((a, b) => b.sc - a.sc);
+    out.poolScore = out.pool.reduce((s, p) => s + p.sc, 0);
+  }
   return out;
 }
 const chChip = (c) => `<button class="chiplink kw" data-open="ch:${encodeURIComponent(c)}">${esc(c)}</button>`;
 
-function slotHtml(i, best, max) {
+function slotHtml(i, best, max, poolMax) {
   const key = draft.slots[i];
   if (!key)
     return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude or relic" autocomplete="off">
@@ -272,12 +287,16 @@ function slotHtml(i, best, max) {
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}</div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}` : ""}
+    ${o.pool.length ? `<div class="ovl"><span>${[...new Set(o.pool.map((p) => p.f))].map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}</div>
+      <div class="chipline">${o.pool.slice(0, 3).map((p) => `<button class="chiplink" data-open="relic:${p.r.id}">${img(p.r.icon, p.r.name)}${esc(p.r.name)}</button>`).join("")}</div>` : ""}
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 
 function renderDraft() {
-  const scores = draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build).score : -1));
+  const ovs = draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build) : null));
+  const scores = ovs.map((o) => (o ? o.score : -1));
   const max = Math.max(0, ...scores);
+  const poolMax = Math.max(0, ...ovs.map((o) => (o ? o.poolScore : 0)));   // second bar: its own scale (A-magnitude-bars)
   const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
   const counts = {};
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
@@ -294,7 +313,7 @@ function renderDraft() {
   const loose = keys.filter((k) => k.startsWith("relic:") && !ownerIn(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);
-  return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>
+  return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max, poolMax)).join("")}</div>
     <h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`

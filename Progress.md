@@ -18,6 +18,9 @@
   Boosts + channel), Synergies tab (channels, rarest first) with Triggers / Reacts or Gives / Scales pages, Dude page
   "Synergy Dudes" / "Synergy relics" ranked by channel rarity, relic page links per relic, roles derived from ability +
   relics (relic-added sub-roles shown as "+"), Draft overlap scored by synergy edges. Taunt keeps the "takes damage" link.
+- 2026-11-14 (6): synergy lists show Family icons; single-unit channels (Pact, Divine Pulse ...) dropped; Draft:
+  a Dude offer scores as the Dude + all his relics, and the first Dude of a Family gets a second bar for the Family
+  relics he unlocks (scored against the build + himself, top 3 relics shown).
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.
