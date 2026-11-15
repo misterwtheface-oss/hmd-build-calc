@@ -74,7 +74,7 @@ function effectBars(eff, big) {
 // partner units of a unit (Dudes or standalone relics), strongest first, each with the channels that join them
 const partners = (u, kind, limit) =>
   (SYN[u] || []).filter((p) => p.u.startsWith(kind + ":")).slice(0, limit);
-const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "));
+const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "), true);
 
 /* ---------- art + chips (all game art goes through these) ---------- */
 const img = (src, alt, cls = "") => (src ? `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="96" height="96">` : "");
@@ -93,9 +93,12 @@ const roleBadge = (d) => {
   return m ? `<span class="badge ${esc(m.role)}">${esc(m.role)}</span>` : "";
 };
 
-function mini(x, sub) {
+// fams: show the Families the Dude / relic belongs to (synergy lists)
+const famsOf = (x) => (x.t ? x.fam : x.fam ? [x.fam] : []);
+function mini(x, sub, fams) {
   const key = x.t ? "dude:" + x.t : "relic:" + x.id;
-  return `<button class="mini" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}${sub ? `<small>${sub}</small>` : ""}</span></button>`;
+  const tail = fams && famsOf(x).length ? `<span class="fams">${famsOf(x).map(famIcon).join("")}</span>` : "";
+  return `<button class="mini" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}${sub ? `<small>${sub}</small>` : ""}</span>${tail}</button>`;
 }
 
 const FMT = { percent: "%", cash: "$", seconds: "s", number: "" };
@@ -393,7 +396,7 @@ function chView(c) {
   if (!ch) return null;
   const side = (keys) => {
     const xs = keys.map(itemOf).filter(Boolean).sort(byName);
-    return grid(xs.map((x) => mini(x, x.t ? "" : esc(poolLabel(x) || ""))));
+    return grid(xs.map((x) => mini(x, x.t ? "" : esc(poolLabel(x) || ""), true)));
   };
   return `<div class="hero"><div><h2>${esc(c)}</h2></div></div>
     ${section(ch.stat ? "Gives" : "Triggers", side(ch.prov))}
