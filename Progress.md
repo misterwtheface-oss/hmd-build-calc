@@ -21,6 +21,9 @@
 - 2026-11-14 (6): synergy lists show Family icons; single-unit channels (Pact, Divine Pulse ...) dropped; Draft:
   a Dude offer scores as the Dude + all his relics, and the first Dude of a Family gets a second bar for the Family
   relics he unlocks (scored against the build + himself, top 3 relics shown).
+- 2026-11-14 (7): Draft bars break down per Dude (name + score), one line per channel: his ability / relics with
+  what each does ↔ the offer's (data: effect-level pairs, `pairs` in data.js). A Dude counts all his relics; a
+  Family / universal / Promoter relic in the build is credited to every Dude it applies to.
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.

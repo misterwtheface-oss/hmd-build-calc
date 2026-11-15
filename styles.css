@@ -193,8 +193,15 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .mini .fams img { width: 18px; height: 18px; flex: 0 0 18px; }
 .ovl img { width: 20px; height: 20px; }
 .ovl b { color: var(--cream); font: 14px var(--narrow); min-width: 2.2em; text-align: right; }
-.via { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 4px 0; }
-.via small { color: var(--olive); font: 12px var(--narrow); }
-.via .with { display: flex; flex-wrap: wrap; gap: 3px; margin-left: auto; }
-.via .vi { padding: 0; border: 0; background: none; cursor: pointer; }
-.via .vi img { width: 24px; height: 24px; display: block; }
+.hold { margin: 6px 0 8px; padding-left: 8px; border-left: 2px solid var(--line); }
+.hhead { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; font: 15px var(--narrow); color: var(--cream); text-align: left; }
+.hhead img { width: 24px; height: 24px; }
+.hhead span { flex: 1 1 auto; min-width: 0; }
+.hhead b { font: 14px var(--narrow); color: var(--cream); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; margin: 4px 0 0 4px; }
+.pair > i { font-style: normal; color: var(--olive); }
+.pair .side { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pair .fx { display: inline-flex; align-items: center; gap: 3px; }
+.pair small { color: var(--olive); font: 12px var(--narrow); }
+.pair .vi { padding: 0; border: 0; background: none; cursor: pointer; }
+.pair .vi img { width: 22px; height: 22px; display: block; }

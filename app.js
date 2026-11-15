@@ -35,6 +35,18 @@ const unitItem = (u) => itemOf(u);
 const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On", boosts: "Boosts" };
 // channels an effect touches that link to another unit (shown as chips; the facet verb says how)
 const fxShown = (x) => x.fx.filter(([, c]) => CH[c]);
+// effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's}]
+const PAIR = {};
+{
+  const { keys, names, fac, p } = H.pairs;
+  for (const [a, b, c, v, pf, cf] of p) {
+    const give = `${FACET[fac[pf]]} ${names[v]}`, use = `${FACET[fac[cf]]} ${names[c]}`;
+    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use });
+    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give });
+  }
+}
+// the effects of a unit: a Dude's ability with every relic of his pool (he can hold them all), or one relic
+const effectsOfUnit = (u) => (u.startsWith("dude:") ? [u, ...relicsOfDude(u.slice(5)).map((r) => "relic:" + r.id)] : [u]);
 const fxLabel = ([f, c, s]) => `${FACET[f]} ${c}${s === "team" && f === "gives" ? " · team" : s === "enemy" ? " · enemy" : ""}`;
 
 // roles derived from a Dude's ability + relics: [role, sub_role, n, fromAbility]
@@ -227,7 +239,7 @@ const saveDraft = () => {
 function overlap(x, build) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
-  const out = { fam: [], links: [], ch: [], score: 0, pool: [], poolScore: 0 };
+  const out = { fam: [], links: [], ch: [], rows: [], score: 0, poolFams: [], poolRows: [], poolScore: 0 };
   const famCount = (f) => dudes.filter((b) => b.fam.includes(f)).length;
   if (x.t) {
     for (const f of x.fam) if (f !== "global" && famCount(f)) out.fam.push([f, famCount(f)]);
@@ -240,41 +252,60 @@ function overlap(x, build) {
     const other = e.a === k ? e.b : e.b === k ? e.a : null;
     if (other && build.includes(other) && !out.links.includes(itemOf(other))) out.links.push(itemOf(other));
   }
-  // synergy: the offer's own effect links (a relic) or its unit's edges (a Dude) into the units already in the build
+  // synergy: the offer's effects (a Dude: his ability and all his relics) paired with the build's, per Dude
   const mine = unitOf(x);
   const inBuild = new Set(items.map(unitOf));
   inBuild.delete(mine);
-  const via = {};   // channel -> build units it connects to
-  const lk = x.t ? (SYN[mine] || []).map((p) => [p.u, p.score, p.chs]) : H.links[k] || [];
-  for (const [u, , cs] of lk) if (inBuild.has(u)) cs.forEach((c) => (via[c] = via[c] || []).push(u));
-  out.ch = Object.keys(via).sort((a, b) => chWeight(b) - chWeight(a));
-  out.via = via;
+  const team = [...new Set(dudes)];
+  out.rows = holders(x.t ? effectsOfUnit(mine) : [k], inBuild, team);
+  out.ch = [...new Set(out.rows.flatMap((r) => [...r.ch.keys()]))];
   out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
-  // first Dude of a Family: the Family relics he unlocks, scored against the build plus himself
+  // first Dude of a Family: the Family relics he unlocks, each scored against the build plus himself
   if (x.t) {
     const reach = new Set([...inBuild, mine]);
-    for (const f of x.fam) {
-      if (f === "global" || famCount(f)) continue;
-      for (const r of relicsOfFamilyPool(f)) {
-        const rv = {};
-        for (const [u, , cs] of H.links["relic:" + r.id] || []) if (reach.has(u)) cs.forEach((c) => (rv[c] = rv[c] || []).push(u));
-        const sc = Object.keys(rv).reduce((s, c) => s + chWeight(c), 0);
-        if (sc) out.pool.push({ r, f, sc, via: rv });
-      }
-    }
-    out.pool.sort((a, b) => b.sc - a.sc);
-    out.poolScore = out.pool.reduce((s, p) => s + p.sc, 0);
+    out.poolFams = x.fam.filter((f) => f !== "global" && !famCount(f));
+    const pool = out.poolFams.flatMap((f) => relicsOfFamilyPool(f).map((r) => "relic:" + r.id));
+    out.poolRows = holders(pool, reach, [...team, x]);
+    out.poolScore = pool.reduce((s, r) =>
+      s + [...new Set((PAIR[r] || []).filter((l) => reach.has(unitOf(itemOf(l.o)))).map((l) => l.ch))].reduce((a, c) => a + chWeight(c), 0), 0);
   }
   return out;
 }
-const num1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
-// one overlap line: what overlaps (chip), [channels,] then the build items it joins (icons, tap to open)
-function viaRow(head, units, chs) {
-  const icons = [...new Set(units)].map((u) => itemOf(u)).filter(Boolean)
-    .map((b) => `<button class="vi" data-open="${keyOf(b)}" title="${esc(b.name)}">${img(b.icon, b.name)}</button>`).join("");
-  return `<div class="via">${head}${chs ? `<small>${chs.map(esc).join(" · ")}</small>` : ""}<span class="with">${icons}</span></div>`;
+
+// who holds what: pairs between the source effects and effects of the target units, grouped by Dude. A Dude counts
+// all his relics; a Family / universal / Promoter relic counts for every Dude of the team it applies to
+const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
+function holders(src, targets, team) {
+  const rows = new Map();   // holder key -> {x, ch: channel -> {theirs, mine: effect key -> facet labels}}
+  for (const s of src)
+    for (const l of PAIR[s] || []) {
+      const t = itemOf(l.o);
+      const tu = unitOf(t);
+      if (!targets.has(tu)) continue;
+      const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => t.fam === "global" || d.fam.includes(t.fam));
+      for (const h of owners.length ? owners : [t]) {
+        const hk = keyOf(h);
+        const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
+        const c = row.ch.get(l.ch) || row.ch.set(l.ch, { theirs: new Map(), mine: new Map() }).get(l.ch);
+        addTo(c.theirs, l.o, l.olabel);
+        addTo(c.mine, s, l.label);
+      }
+    }
+  return [...rows.values()]
+    .map((r) => ({ ...r, score: [...r.ch.keys()].reduce((a, c) => a + chWeight(c), 0) }))
+    .sort((a, b) => b.score - a.score || byName(a.x, b.x));
 }
-const chChip = (c) => `<button class="chiplink kw" data-open="ch:${encodeURIComponent(c)}">${esc(c)}</button>`;
+const num1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+const iconBtn = (k) => { const b = itemOf(k); return `<button class="vi" data-open="${k}" title="${esc(b.name)}">${img(b.icon, b.name)}</button>`; };
+// one side of a pair: each ability / relic (icon, tap to open) beside what it does, items doing the same grouped
+function pairSide(m) {
+  const by = new Map();   // facet labels -> effect keys
+  for (const [k, v] of m) addTo(by, [...v].join(" / "), k);
+  return `<span class="side">${[...by].map(([lab, ks]) => `<span class="fx">${[...ks].map(iconBtn).join("")}<small>${esc(lab)}</small></span>`).join("")}</span>`;
+}
+// per Dude: his name and score, then one line per channel: his effects ↔ the offer's
+const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${keyOf(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
+    ${[...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
 
 function slotHtml(i, best, max, poolMax) {
   const key = draft.slots[i];
@@ -289,15 +320,12 @@ function slotHtml(i, best, max, poolMax) {
     ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
     ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
   ];
-  const vias = o.ch.map((c) => viaRow(chChip(c), o.via[c])).join("");
   return `<div class="slot${o.score === best ? " best" : ""}">
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span></button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>
-    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${vias}` : ""}
-    ${o.pool.length ? `<div class="ovl"><span>${[...new Set(o.pool.map((p) => p.f))].map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}<b>${num1(o.poolScore)}</b></div>
-      ${o.pool.slice(0, 3).map((p) => viaRow(`<button class="chiplink" data-open="relic:${p.r.id}">${img(p.r.icon, p.r.name)}${esc(p.r.name)}</button>`,
-        [...new Set(Object.values(p.via).flat())], Object.keys(p.via).sort((a, b) => chWeight(b) - chWeight(a)))).join("")}` : ""}
+    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${holderRows(o.rows)}` : ""}
+    ${o.poolScore ? `<div class="ovl"><span>${o.poolFams.map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}<b>${num1(o.poolScore)}</b></div>${holderRows(o.poolRows)}` : ""}
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 
