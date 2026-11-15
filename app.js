@@ -244,10 +244,11 @@ function overlap(x, build) {
   const mine = unitOf(x);
   const inBuild = new Set(items.map(unitOf));
   inBuild.delete(mine);
-  const chs = new Set();
+  const via = {};   // channel -> build units it connects to
   const lk = x.t ? (SYN[mine] || []).map((p) => [p.u, p.score, p.chs]) : H.links[k] || [];
-  for (const [u, , cs] of lk) if (inBuild.has(u)) cs.forEach((c) => chs.add(c));
-  out.ch = [...chs].sort((a, b) => chWeight(b) - chWeight(a));
+  for (const [u, , cs] of lk) if (inBuild.has(u)) cs.forEach((c) => (via[c] = via[c] || []).push(u));
+  out.ch = Object.keys(via).sort((a, b) => chWeight(b) - chWeight(a));
+  out.via = via;
   out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   // first Dude of a Family: the Family relics he unlocks, scored against the build plus himself
   if (x.t) {
@@ -255,16 +256,23 @@ function overlap(x, build) {
     for (const f of x.fam) {
       if (f === "global" || famCount(f)) continue;
       for (const r of relicsOfFamilyPool(f)) {
-        const rc = new Set();
-        for (const [u, , cs] of H.links["relic:" + r.id] || []) if (reach.has(u)) cs.forEach((c) => rc.add(c));
-        const sc = [...rc].reduce((s, c) => s + chWeight(c), 0);
-        if (sc) out.pool.push({ r, f, sc });
+        const rv = {};
+        for (const [u, , cs] of H.links["relic:" + r.id] || []) if (reach.has(u)) cs.forEach((c) => (rv[c] = rv[c] || []).push(u));
+        const sc = Object.keys(rv).reduce((s, c) => s + chWeight(c), 0);
+        if (sc) out.pool.push({ r, f, sc, via: rv });
       }
     }
     out.pool.sort((a, b) => b.sc - a.sc);
     out.poolScore = out.pool.reduce((s, p) => s + p.sc, 0);
   }
   return out;
+}
+const num1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+// one overlap line: what overlaps (chip), [channels,] then the build items it joins (icons, tap to open)
+function viaRow(head, units, chs) {
+  const icons = [...new Set(units)].map((u) => itemOf(u)).filter(Boolean)
+    .map((b) => `<button class="vi" data-open="${keyOf(b)}" title="${esc(b.name)}">${img(b.icon, b.name)}</button>`).join("");
+  return `<div class="via">${head}${chs ? `<small>${chs.map(esc).join(" · ")}</small>` : ""}<span class="with">${icons}</span></div>`;
 }
 const chChip = (c) => `<button class="chiplink kw" data-open="ch:${encodeURIComponent(c)}">${esc(c)}</button>`;
 
@@ -280,15 +288,16 @@ function slotHtml(i, best, max, poolMax) {
   const ov = [
     ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
     ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
-    ...o.ch.map(chChip),
   ];
+  const vias = o.ch.map((c) => viaRow(chChip(c), o.via[c])).join("");
   return `<div class="slot${o.score === best ? " best" : ""}">
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span></button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>
-    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}</div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}` : ""}
-    ${o.pool.length ? `<div class="ovl"><span>${[...new Set(o.pool.map((p) => p.f))].map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}</div>
-      <div class="chipline">${o.pool.slice(0, 3).map((p) => `<button class="chiplink" data-open="relic:${p.r.id}">${img(p.r.icon, p.r.name)}${esc(p.r.name)}</button>`).join("")}</div>` : ""}
+    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${vias}` : ""}
+    ${o.pool.length ? `<div class="ovl"><span>${[...new Set(o.pool.map((p) => p.f))].map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}<b>${num1(o.poolScore)}</b></div>
+      ${o.pool.slice(0, 3).map((p) => viaRow(`<button class="chiplink" data-open="relic:${p.r.id}">${img(p.r.icon, p.r.name)}${esc(p.r.name)}</button>`,
+        [...new Set(Object.values(p.via).flat())], Object.keys(p.via).sort((a, b) => chWeight(b) - chWeight(a)))).join("")}` : ""}
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 

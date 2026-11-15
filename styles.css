@@ -154,7 +154,7 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
   flex: 0 0 auto; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--panel2); cursor: pointer; font-size: 18px; line-height: 1; color: var(--cream);
 }
-.ovl { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 6px; font: 14px var(--narrow); color: var(--olive); }
+.ovl { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-bottom: 6px; font: 14px var(--narrow); color: var(--olive); }
 .ovl .bar { height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
 .ovl .bar i { display: block; height: 100%; background: var(--mustard); border-radius: 3px; }
 .take, .clear, .offer {
@@ -192,3 +192,9 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .mini .fams { margin-left: auto; display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
 .mini .fams img { width: 18px; height: 18px; flex: 0 0 18px; }
 .ovl img { width: 20px; height: 20px; }
+.ovl b { color: var(--cream); font: 14px var(--narrow); min-width: 2.2em; text-align: right; }
+.via { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 4px 0; }
+.via small { color: var(--olive); font: 12px var(--narrow); }
+.via .with { display: flex; flex-wrap: wrap; gap: 3px; margin-left: auto; }
+.via .vi { padding: 0; border: 0; background: none; cursor: pointer; }
+.via .vi img { width: 24px; height: 24px; display: block; }
