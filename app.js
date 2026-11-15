@@ -229,6 +229,7 @@ const draft = (() => {
   return {
     build: Array.isArray(d?.build) ? d.build.filter(ok) : [],
     slots: Array.from({ length: SLOTS }, (_, i) => (ok(d?.slots?.[i]) ? d.slots[i] : null)),
+    view: d?.view === "team" ? "team" : "offers",   // Offers: score offers against the build; Team: the build itself
   };
 })();
 const saveDraft = () => {
@@ -259,7 +260,7 @@ function overlap(x, build) {
   // the build reaches its Dudes' relics (their units) and the relics of every Family it has a member of
   const inBuild = new Set([...items.map(unitOf), ...buildFams(team).flatMap((f) => relicsOfFamilyPool(f).map(unitOf))]);
   inBuild.delete(mine);
-  out.rows = holders(x.t ? effectsOfUnit(mine) : [k], inBuild, team);
+  out.rows = holders(x.t ? effectsOfUnit(mine) : [k], inUnits(inBuild), team);
   out.ch = [...new Set(out.rows.flatMap((r) => [...r.ch.keys()]))];
   out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   // first Dude of a Family: the Family relics he unlocks, each scored against the build plus himself
@@ -267,24 +268,26 @@ function overlap(x, build) {
     const reach = new Set([...inBuild, mine]);
     out.poolFams = x.fam.filter((f) => f !== "global" && !famCount(f));
     const pool = out.poolFams.flatMap((f) => relicsOfFamilyPool(f).map((r) => "relic:" + r.id));
-    out.poolRows = holders(pool, reach, [...team, x]);
+    out.poolRows = holders(pool, inUnits(reach), [...team, x]);
     out.poolScore = pool.reduce((s, r) =>
       s + [...new Set((PAIR[r] || []).filter((l) => reach.has(unitOf(itemOf(l.o)))).map((l) => l.ch))].reduce((a, c) => a + chWeight(c), 0), 0);
   }
   return out;
 }
 
-// who holds what: pairs between the source effects and effects of the target units, grouped by Dude. A Dude counts
+// who holds what: pairs between the source effects and the target effects (ok(key)), grouped by Dude. A Dude counts
 // all his relics; a Family / universal / Promoter relic counts for every Dude of the team it applies to
 const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
-function holders(src, targets, team) {
+const inUnits = (units) => (k) => units.has(unitOf(itemOf(k)));
+const appliesTo = (r, d) => r.fam === "global" || d.fam.includes(r.fam);
+function holders(src, ok, team) {
   const rows = new Map();   // holder key -> {x, ch: channel -> {theirs, mine: effect key -> facet labels}}
   for (const s of src)
     for (const l of PAIR[s] || []) {
+      if (!ok(l.o)) continue;
       const t = itemOf(l.o);
       const tu = unitOf(t);
-      if (!targets.has(tu)) continue;
-      const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => t.fam === "global" || d.fam.includes(t.fam));
+      const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => appliesTo(t, d));
       for (const h of owners.length ? owners : [t]) {
         const hk = keyOf(h);
         const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
@@ -331,8 +334,29 @@ function slotHtml(i, best, max, poolMax) {
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 
+// a Dude's active effects in the build: his ability, his picked relics, and every picked Family / universal /
+// Promoter relic that applies to him
+function activeOf(d, counts) {
+  return ["dude:" + d.t, ...Object.keys(counts).filter((k) => {
+    const r = k.startsWith("relic:") && itemOf(k);
+    return r && (r.pool === "dude" ? r.dude === d.t : appliesTo(r, d));
+  })];
+}
+// Team view, under a Dude: what each active effect does, then his edges to the rest of the team (their active effects)
+function teamHtml(d, team, counts) {
+  const mine = activeOf(d, counts);
+  const others = team.filter((o) => o !== d);
+  const theirs = new Set(others.flatMap((o) => activeOf(o, counts)).filter((k) => !mine.includes(k)));
+  const fx = mine.filter((k) => fxShown(itemOf(k)).length)
+    .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxShown(itemOf(k)).map(fxChip).join("")}</span></div>`).join("");
+  return `<div class="tview">${fx}${holderRows(holders(mine, (k) => theirs.has(k), others))}</div>`;
+}
+
 function renderDraft() {
-  const ovs = draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build) : null));
+  const view = `<div class="chips dview">${[["offers", "Offers"], ["team", "Team"]]
+    .map(([v, n]) => `<button class="fchip" data-dview="${v}" aria-pressed="${draft.view === v}">${n}</button>`).join("")}</div>`;
+  const team = draft.view === "team";
+  const ovs = team ? [] : draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build) : null));
   const scores = ovs.map((o) => (o ? o.score : -1));
   const max = Math.max(0, ...scores);
   const poolMax = Math.max(0, ...ovs.map((o) => (o ? o.poolScore : 0)));   // second bar: its own scale (A-magnitude-bars)
@@ -349,14 +373,15 @@ function renderDraft() {
   const relicPicks = (rs) => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
     aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}</div>`;
   const groups = [
-    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)))}</div>`),
+    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)))}${team
+      ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
     ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
   ];
   const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);
-  return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max, poolMax)).join("")}</div>
+  return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max, poolMax)).join("")}</div>`}
     <h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
@@ -529,7 +554,7 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
@@ -541,6 +566,7 @@ document.addEventListener("click", (e) => {
     } else if (ds.unslot) draft.slots[+ds.unslot] = null;
     else if (ds.unbuild) draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
     else if (ds.clearbuild) draft.build.length = 0;
+    else if (ds.dview) draft.view = ds.dview;
     else if (ds.toggle) {
       // a picked relic leaves the build entirely (every copy), an unpicked one joins it
       if (draft.build.includes(ds.toggle)) draft.build = draft.build.filter((k) => k !== ds.toggle);

@@ -57,6 +57,16 @@ for (const build of [[], ["dude:basketball", "dude:basketball", "relic:r_jump_sh
     tryRender(`draft ${build.length} ${all[i]}`, () => { renderList(); return els["#list"].innerHTML; });
   }
 }
+// Team view: every Dude, three at a time, with all their relics and their Families' relics picked
+draft.view = "team";
+const named = H.dudes.filter((d) => d.name);
+for (let i = 0; i < named.length; i += 3) {
+  const ds = named.slice(i, i + 3);
+  const rel = H.relics.filter((r) => (r.pool === "dude" ? ds.some((d) => d.t === r.dude) : r.fam === "global" || ds.some((d) => d.fam.includes(r.fam))));
+  draft.build.splice(0, draft.build.length, ...ds.map(keyOf), ...rel.map(keyOf));
+  tryRender(`team ${ds.map((d) => d.t)}`, () => { renderList(); return els["#list"].innerHTML; });
+}
+draft.view = "offers";
 draft.slots.splice(0, 3, null, null, null);
 tryRender("draft empty slots", () => { renderList(); return els["#list"].innerHTML + pickResults(0, "dude"); });
 if (!overlap(H.relics.find((r) => r.id === "r_jump_shoes"), ["dude:basketball"]).links.length) problems.push("draft: Jump Shoes not linked to Basketball Dude");

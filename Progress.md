@@ -27,6 +27,9 @@
 - 2026-11-14 (8): offer scores also count the relics of every Family the build has a member of (credited to its
   members). Build section: each Dude and each such Family lists all its relics as faded icons; tapping one picks it
   (joins the build, counts in Build effects), tapping again drops it.
+- 2026-11-14 (9): Draft view switch (saved): Offers (above) / Team. Team hides the offers and, under each Dude,
+  lists his active effects (ability + picked relics + picked Family / universal / Promoter relics that apply to
+  him) and his edges to the other Dudes' active effects.
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.
