@@ -182,8 +182,8 @@ function renderList() {
     $("#list").innerHTML = cards.length ? `<div class="famgrid">${cards.join("")}</div>` : `<div class="empty">No matches</div>`;
     return;
   } else {
-    // channels that join two or more units, rarest first
-    const shown = H.chans.filter((c) => new Set([...c.prov, ...c.use].map((k) => unitOf(itemOf(k)))).size > 1 && match(q, c.id));
+    // channels (each joins two or more units, build_data.py), rarest first
+    const shown = H.chans.filter((c) => match(q, c.id));
     rows = shown
       .sort((a, b) => b.r - a.r || a.id.localeCompare(b.id))
       .map((c) => `<button class="row" data-open="ch:${encodeURIComponent(c.id)}"><span class="main"><span class="name">${esc(c.id)}</span></span></button>`);

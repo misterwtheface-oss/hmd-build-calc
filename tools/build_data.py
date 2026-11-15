@@ -110,8 +110,9 @@ def main():
         if unit[l["from"]] != unit[l["to"]]:
             for me, other in ((l["from"], unit[l["to"]]), (l["to"], unit[l["from"]])):
                 part.setdefault(me, {}).setdefault(other, set()).add(l["ch"])
-    chans = sorted(({**c, "prov": sorted(c["prov"]), "use": sorted(c["use"])} for c in chans.values()),
-                   key=lambda c: c["id"])
+    # a channel only counts as a synergy when it joins two or more units (Pact = Warlock + his own relics: dropped)
+    chans = sorted(({**c, "prov": sorted(c["prov"]), "use": sorted(c["use"])} for c in chans.values()
+                    if len({unit[k] for k in c["prov"] | c["use"]}) > 1), key=lambda c: c["id"])
     links_of = {k: sorted(([u, round(sum(rar.get(c, 0) for c in cs), 2), sorted(cs, key=lambda c: -rar.get(c, 0))]
                            for u, cs in v.items()), key=lambda x: -x[1])[:12] for k, v in part.items()}
 
