@@ -24,6 +24,9 @@
 - 2026-11-14 (7): Draft bars break down per Dude (name + score), one line per channel: his ability / relics with
   what each does ↔ the offer's (data: effect-level pairs, `pairs` in data.js). A Dude counts all his relics; a
   Family / universal / Promoter relic in the build is credited to every Dude it applies to.
+- 2026-11-14 (8): offer scores also count the relics of every Family the build has a member of (credited to its
+  members). Build section: each Dude and each such Family lists all its relics as faded icons; tapping one picks it
+  (joins the build, counts in Build effects), tapping again drops it.
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.

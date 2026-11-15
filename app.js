@@ -235,7 +235,8 @@ const saveDraft = () => {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage off */ }
 };
 
-// what an offer shares with the build: game Family, its relic pool, names / owned relics, synergy edges
+const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) => f !== "global" && FAM[f]);
+// what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
@@ -254,9 +255,10 @@ function overlap(x, build) {
   }
   // synergy: the offer's effects (a Dude: his ability and all his relics) paired with the build's, per Dude
   const mine = unitOf(x);
-  const inBuild = new Set(items.map(unitOf));
-  inBuild.delete(mine);
   const team = [...new Set(dudes)];
+  // the build reaches its Dudes' relics (their units) and the relics of every Family it has a member of
+  const inBuild = new Set([...items.map(unitOf), ...buildFams(team).flatMap((f) => relicsOfFamilyPool(f).map(unitOf))]);
+  inBuild.delete(mine);
   out.rows = holders(x.t ? effectsOfUnit(mine) : [k], inBuild, team);
   out.ch = [...new Set(out.rows.flatMap((r) => [...r.ch.keys()]))];
   out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
@@ -339,15 +341,19 @@ function renderDraft() {
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
   const tile = (k) =>
     `<div class="btile">${mini(itemOf(k), counts[k] > 1 ? "×" + counts[k] : "")}<button class="x" data-unbuild="${k}" aria-label="Remove">×</button></div>`;
-  // each Dude with his own drafted relics nested under him; every other relic after
+  // each Dude, then each Family the build has a member of, with all their relics as icons: faded until picked,
+  // a picked relic joins the build (and the Build effects); every other drafted relic after as a tile
   const keys = Object.keys(counts);
   const dudeKeys = keys.filter((k) => k.startsWith("dude:"));
-  const ownerIn = (k) => { const x = itemOf(k); return x.pool === "dude" && counts["dude:" + x.dude]; };
-  const groups = dudeKeys.map((dk) => {
-    const own = keys.filter((k) => k.startsWith("relic:") && itemOf(k).dude === dk.slice(5));
-    return `<div class="bgroup">${tile(dk)}${own.length ? `<div class="bnest">${own.map(tile).join("")}</div>` : ""}</div>`;
-  });
-  const loose = keys.filter((k) => k.startsWith("relic:") && !ownerIn(k));
+  const fams = buildFams(dudeKeys.map(itemOf));
+  const relicPicks = (rs) => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
+    aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}</div>`;
+  const groups = [
+    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)))}</div>`),
+    ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
+  ];
+  const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : fams.includes(x.fam); };
+  const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);
   return `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max, poolMax)).join("")}</div>
@@ -523,7 +529,7 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
@@ -535,6 +541,11 @@ document.addEventListener("click", (e) => {
     } else if (ds.unslot) draft.slots[+ds.unslot] = null;
     else if (ds.unbuild) draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
     else if (ds.clearbuild) draft.build.length = 0;
+    else if (ds.toggle) {
+      // a picked relic leaves the build entirely (every copy), an unpicked one joins it
+      if (draft.build.includes(ds.toggle)) draft.build = draft.build.filter((k) => k !== ds.toggle);
+      else draft.build.push(ds.toggle);
+    }
     else if (ds.offer) {
       offer(ds.offer);
       dr.textContent = "In draft";
