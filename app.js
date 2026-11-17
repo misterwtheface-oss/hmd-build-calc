@@ -54,6 +54,11 @@ const fxLabel = ([f, c, s]) => `${FACET[f]} ${c}${s === "team" && f === "gives" 
 const ROLES = ["Tank", "AOE", "Single Target", "Healing", "Control"];
 const hasRole = (d, r) => d.roles.includes(r);
 const fnText = (x) => (x.fn ? x.fn.join(" · ") : "");
+// display order: by Function, then Focus, in taxonomy order
+const FN_ORDER = ["Offense · Single", "Offense · Area", "Offense · Debuff", "Offense · Self-Scaling", "Defense · Taunt",
+  "Defense · Mitigation", "Support · Heal", "Support · Protection", "Support · Buff", "Utility · Summon",
+  "Utility · Economy", "Utility · Reposition"];
+const fnRank = (x) => (FN_ORDER.indexOf(fnText(x)) + FN_ORDER.length + 1) % (FN_ORDER.length + 1);
 
 function itemEffects(items, n) {
   const count = {};
@@ -412,11 +417,13 @@ function dudeView(t) {
   if (!d) return null;
   const key = "dude:" + t;
   // Role (game) badges; then Function / Focus of his ability (solid) and the other ones his relics add (+)
-  const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()];
+  // Role badges + his ability's Function in one row; the other Functions his relics add (+) below, by category
+  const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()]
+    .sort((a, b) => fnRank(a) - fnRank(b));
   const role = FEATURES.roles && (d.roles.length || d.fn || extra.length)
-    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}<div class="tags">${fnTag(d)}${extra
+    ? `<div class="role"><div class="meta">${roleBadge(d)}${fnTag(d)}</div>${extra.length ? `<div class="tags">${extra
       .map((r) => fnTag(r, true))
-      .join("")}</div></div>`
+      .join("")}</div>` : ""}</div>`
     : "";
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
