@@ -33,8 +33,9 @@
 - 2026-11-17: token numbers 1166 of 1186 (was 1117). The extract now follows numbers passed into struct literals
   from globals and simple arithmetic (Agent's Asset 8 s, Medic heal = HP_BASE x 0.1, Coach 60%) and ties universal
   relics to their struct by the RelicInfo creation call. Every Dude ability is complete.
+- 2026-11-17 (2): all 1186 token numbers filled. Every relic is tied to its struct by code (277 by the RelicInfo
+  creation call, 154 by id string); consumable relics read CONSUMABLE_RELIC_DISCOUNT (50%), Nuclear Codes its
+  NuclearCodeVariables block. Fix: Ablative Shield = 100% of Healing, Great Helm = 3% Max HP (were swapped).
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.
-- [ ] Remaining 20 token numbers: 4 consumable relics (Splitting Headache, Fairy Ring, Loaded Dice, Ion Storm) and
-  Nuclear Codes have no matched struct; Cosmic Geode discount, Unholy Grail damage.
