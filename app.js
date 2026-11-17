@@ -318,13 +318,13 @@ function slotHtml(i, best, max, poolMax) {
   const x = itemOf(key);
   const o = overlap(x, draft.build);
   const label = x.t ? x.fam.map(famIcon).join("") : poolIcon(x);
-  const text = (x.ab ? `<div class="ab">${esc(x.ab)}</div>` : "") + renderSegs(x.seg);
+  const text = (x.ab ? `<div class="ab">${esc(x.ab)}${fnTag(x)}</div>` : "") + renderSegs(x.seg);
   const ov = [
     ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
     ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
   ];
   return `<div class="slot${o.score === best ? " best" : ""}">
-    <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span></button>
+    <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span>${x.t ? "" : fnTag(x)}</button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${holderRows(o.rows)}` : ""}
@@ -401,8 +401,8 @@ function offer(key) {
 /* ---------- detail views ---------- */
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
-  return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span></button>
-    <div class="rdesc">${renderSegs(r.seg)}</div>${fnTag(r) ? `<div class="tags">${fnTag(r)}</div>` : ""}${FEATURES.synergy ? fxLine(r) : ""}</div>`;
+  return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span>${fnTag(r)}</button>
+    <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
 // draft action in the detail sheet's header bar (Dude and relic pages)
@@ -417,11 +417,11 @@ function dudeView(t) {
   if (!d) return null;
   const key = "dude:" + t;
   // Role (game) badges; then Function / Focus of his ability (solid) and the other ones his relics add (+)
-  // Role badges + his ability's Function in one row; the other Functions his relics add (+) below, by category
+  // Role badges; the other Functions his relics add (+) below, by category (his ability's sits by its name)
   const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()]
     .sort((a, b) => fnRank(a) - fnRank(b));
-  const role = FEATURES.roles && (d.roles.length || d.fn || extra.length)
-    ? `<div class="role"><div class="meta">${roleBadge(d)}${fnTag(d)}</div>${extra.length ? `<div class="tags">${extra
+  const role = FEATURES.roles && (d.roles.length || extra.length)
+    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}${extra.length ? `<div class="tags">${extra
       .map((r) => fnTag(r, true))
       .join("")}</div>` : ""}</div>`
     : "";
@@ -436,7 +436,7 @@ function dudeView(t) {
   const syn = FEATURES.synergy;
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
     ${role}
-    ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
+    ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
     ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
     ${section("Relics", relicCards(relicsOfDude(t)))}
@@ -455,8 +455,7 @@ function relicView(id) {
   // this relic's own effect links (not his owner's whole kit)
   const linked = (H.links[key] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   const syn = FEATURES.synergy;
-  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}</div></div></div>
-    ${fnTag(r) ? `<div class="role"><div class="tags">${fnTag(r)}</div></div>` : ""}
+  return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}${fnTag(r)}</h2><div class="meta">${pool}</div></div></div>
     <div class="desc">${renderSegs(r.seg)}${syn ? fxLine(r) : ""}</div>
     ${syn ? section("Synergies", grid(linked)) : ""}
     ${section("Names", grid(refs))}`;

@@ -99,6 +99,11 @@ main { padding: 10px 12px 24px; max-width: 900px; margin: 0 auto; }
 .badge.role-SingleTarget { background: var(--mustard); }
 .badge.role-Healing { background: var(--teal); }
 .badge.role-Control { background: var(--sage); color: var(--cream); }
+/* Function chip to the right of an effect name */
+.desc .ab, .slot .ab { display: flex; align-items: center; gap: 8px; }
+.ab .tag, .rhead .tag, h2 .tag { margin-left: auto; flex: 0 0 auto; white-space: nowrap; }
+.rhead > span:not(.tag) { min-width: 0; }
+h2 .tag { margin-left: 8px; vertical-align: middle; }
 .tag.fn-Offense { background: var(--brick); }
 .tag.fn-Defense { background: var(--line); }
 .tag.fn-Support { background: var(--teal); }
