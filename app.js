@@ -100,8 +100,7 @@ const fxChip = (f) => `<button class="chiplink kw fx-${f[0]}" data-open="ch:${en
 const fxLine = (x) => (fxShown(x).length ? `<div class="chipline">${fxShown(x).map(fxChip).join("")}</div>` : "");
 const roleBadge = (d) =>
   FEATURES.roles ? d.roles.map((r) => `<span class="badge role-${r.replace(/ /g, "")}">${esc(r)}</span>`).join("") : "";
-const fnTag = (x, plus) =>
-  FEATURES.roles && x.fn ? `<span class="tag fn-${x.fn[0]}${plus ? " plus" : ""}">${plus ? "+ " : ""}${esc(fnText(x))}</span>` : "";
+const fnTag = (x) => (FEATURES.roles && x.fn ? `<span class="tag fn fn-${x.fn[0]}">${esc(fnText(x))}</span>` : "");
 
 // fams: show the Families the Dude / relic belongs to (synergy lists)
 const famsOf = (x) => (x.t ? x.fam : x.fam ? [x.fam] : []);
@@ -416,15 +415,14 @@ function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
   const key = "dude:" + t;
-  // Role (game) badges; then Function / Focus of his ability (solid) and the other ones his relics add (+)
-  // Role badges + his ability's Function in one row (also by the ability name); the other Functions his relics add
-  // (+) below, by category
-  const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()]
+  // Role (game) badges alone; below, every Function / Focus of his ability + relics together, one row per Function
+  const fns = [...new Map([d, ...relicsOfDude(t)].filter((x) => x.fn).map((x) => [fnText(x), x])).values()]
     .sort((a, b) => fnRank(a) - fnRank(b));
-  const role = FEATURES.roles && (d.roles.length || d.fn || extra.length)
-    ? `<div class="role"><div class="meta">${roleBadge(d)}${fnTag(d)}</div>${extra.length ? `<div class="tags">${extra
-      .map((r) => fnTag(r, true))
-      .join("")}</div>` : ""}</div>`
+  const fnRows = [...new Set(fns.map((x) => x.fn[0]))]
+    .map((f) => `<div class="tags">${fns.filter((x) => x.fn[0] === f).map(fnTag).join("")}</div>`)
+    .join("");
+  const role = FEATURES.roles && (d.roles.length || fns.length)
+    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}${fnRows}</div>`
     : "";
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));

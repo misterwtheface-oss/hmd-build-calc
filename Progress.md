@@ -40,6 +40,10 @@
   extract game_roles.json); the Dudes filter uses them. Our categories became Function / Focus (Offense, Defense,
   Support, Utility), derived from code (extract code_tags.json) and shown separately as tags on each ability and
   relic; a Dude page lists his ability's tag plus the other ones his relics add ("+"). Old derived roles retired.
+- 2026-11-17 (4): Function chips: one outline style (no "+" variant), beside each effect name; Dude page = Role
+  badges alone, then his ability + relic Functions together, one row per Function. Team-targeted buffs now count as
+  Support even when the effect deals damage (decoded receivers): Bard, Manager, Football and their boost relics moved
+  from Offense to Support · Buff.
 
 ## Open
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
