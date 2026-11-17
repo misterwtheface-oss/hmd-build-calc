@@ -92,10 +92,21 @@ main { padding: 10px 12px 24px; max-width: 900px; margin: 0 auto; }
   display: inline-block; padding: 1px 7px; border-radius: 6px; font: 13px var(--narrow);
   color: var(--ink); background: var(--olive);
 }
-.badge.Damage { background: var(--brick); }
-.badge.Tank { background: var(--line); color: var(--cream); }
-.badge.Support { background: var(--teal); }
-.badge.Utility { background: var(--mustard); }
+/* Role = the game's own (square badges); Function = ours (pill tags, coloured below) */
+.badge + .badge { margin-left: 4px; }
+.badge.role-Tank { background: var(--line); color: var(--cream); }
+.badge.role-AOE { background: var(--brick); }
+.badge.role-SingleTarget { background: var(--mustard); }
+.badge.role-Healing { background: var(--teal); }
+.badge.role-Control { background: var(--sage); color: var(--cream); }
+.tag.fn-Offense { background: var(--brick); }
+.tag.fn-Defense { background: var(--line); }
+.tag.fn-Support { background: var(--teal); }
+.tag.fn-Utility { background: var(--mustard); color: var(--ink); }
+.tag.plus { background: transparent; }
+.tag.plus.fn-Offense { color: var(--brick); box-shadow: inset 0 0 0 1px var(--brick); }
+.tag.plus.fn-Support { color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+.tag.plus.fn-Utility { color: var(--mustard); box-shadow: inset 0 0 0 1px var(--mustard); }
 
 .overlay { position: fixed; inset: 0; z-index: 20; background: rgba(10, 6, 8, .6); display: flex; justify-content: center; }
 .overlay.hidden { display: none; }

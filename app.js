@@ -49,18 +49,11 @@ const PAIR = {};
 const effectsOfUnit = (u) => (u.startsWith("dude:") ? [u, ...relicsOfDude(u.slice(5)).map((r) => "relic:" + r.id)] : [u]);
 const fxLabel = ([f, c, s]) => `${FACET[f]} ${c}${s === "team" && f === "gives" ? " · team" : s === "enemy" ? " · enemy" : ""}`;
 
-// roles derived from a Dude's ability + relics: [role, sub_role, n, fromAbility]
-const ROLES = ["Damage", "Tank", "Support", "Utility"];
-function mainRole(d) {
-  const sum = {};
-  const pool = d.roles.some((r) => r[3]) ? d.roles.filter((r) => r[3]) : d.roles;
-  for (const [r, , n] of pool) sum[r] = (sum[r] || 0) + n;
-  const top = Object.entries(sum).sort((a, b) => b[1] - a[1])[0];
-  if (!top) return null;
-  const sub = pool.filter((r) => r[0] === top[0]).sort((a, b) => b[2] - a[2])[0][1];
-  return { role: top[0], sub };
-}
-const hasRole = (d, r) => d.roles.some((x) => x[0] === r);
+// Role = the game's own list on the Dude (Tank, AOE, Single Target, Healing, Control).
+// Function / Focus = our category on each effect (ability or relic), from code: x.fn = [function, focus] | null
+const ROLES = ["Tank", "AOE", "Single Target", "Healing", "Control"];
+const hasRole = (d, r) => d.roles.includes(r);
+const fnText = (x) => (x.fn ? x.fn.join(" · ") : "");
 
 function itemEffects(items, n) {
   const count = {};
@@ -100,10 +93,10 @@ const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
 const fxChip = (f) => `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(f[1])}">${esc(fxLabel(f))}</button>`;
 const fxLine = (x) => (fxShown(x).length ? `<div class="chipline">${fxShown(x).map(fxChip).join("")}</div>` : "");
-const roleBadge = (d) => {
-  const m = FEATURES.roles && mainRole(d);
-  return m ? `<span class="badge ${esc(m.role)}">${esc(m.role)}</span>` : "";
-};
+const roleBadge = (d) =>
+  FEATURES.roles ? d.roles.map((r) => `<span class="badge role-${r.replace(/ /g, "")}">${esc(r)}</span>`).join("") : "";
+const fnTag = (x, plus) =>
+  FEATURES.roles && x.fn ? `<span class="tag fn-${x.fn[0]}${plus ? " plus" : ""}">${plus ? "+ " : ""}${esc(fnText(x))}</span>` : "";
 
 // fams: show the Families the Dude / relic belongs to (synergy lists)
 const famsOf = (x) => (x.t ? x.fam : x.fam ? [x.fam] : []);
@@ -208,7 +201,7 @@ function itemRow(x, attr) {
   const a = attr || `data-open="${keyOf(x)}"`;
   return x.t
     ? `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
-        <span class="sub">${esc(x.ab || "")}${FEATURES.roles && mainRole(x) ? " · " + esc(mainRole(x).sub) : ""}</span></span>
+        <span class="sub">${esc(x.ab || "")}${FEATURES.roles && x.fn ? " · " + esc(fnText(x)) : ""}</span></span>
         <span class="tail">${roleBadge(x)}${x.fam.map(famIcon).join("")}</span></button>`
     : `<button class="row" ${a}>${img(x.icon, x.name, "ic")}<span class="main"><span class="name">${esc(x.name)}</span>
         <span class="sub">${esc(poolLabel(x) || "")}</span></span><span class="tail">${poolIcon(x)}</span></button>`;
@@ -404,7 +397,7 @@ function offer(key) {
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
   return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span></button>
-    <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
+    <div class="rdesc">${renderSegs(r.seg)}</div>${fnTag(r) ? `<div class="tags">${fnTag(r)}</div>` : ""}${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
 // draft action in the detail sheet's header bar (Dude and relic pages)
@@ -418,11 +411,11 @@ function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
   const key = "dude:" + t;
-  // roles from his ability (solid) and the ones his relics add (+)
-  const m = mainRole(d);
-  const role = FEATURES.roles && m
-    ? `<div class="role"><div class="meta">${roleBadge(d)}<span>${esc(m.sub)}</span></div><div class="tags">${d.roles
-      .map(([r, s, , ab]) => `<span class="tag ${esc(r)}${ab ? "" : " plus"}">${ab ? "" : "+ "}${esc(s)}</span>`)
+  // Role (game) badges; then Function / Focus of his ability (solid) and the other ones his relics add (+)
+  const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()];
+  const role = FEATURES.roles && (d.roles.length || d.fn || extra.length)
+    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}<div class="tags">${fnTag(d)}${extra
+      .map((r) => fnTag(r, true))
       .join("")}</div></div>`
     : "";
   const famRelics = d.fam.map((f) => famChip(f)).join("");
@@ -456,6 +449,7 @@ function relicView(id) {
   const linked = (H.links[key] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   const syn = FEATURES.synergy;
   return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}</h2><div class="meta">${pool}</div></div></div>
+    ${fnTag(r) ? `<div class="role"><div class="tags">${fnTag(r)}</div></div>` : ""}
     <div class="desc">${renderSegs(r.seg)}${syn ? fxLine(r) : ""}</div>
     ${syn ? section("Synergies", grid(linked)) : ""}
     ${section("Names", grid(refs))}`;
@@ -472,7 +466,7 @@ function familyView(f) {
   return `<div class="hero">${img(fam.icon, fam.name)}<div><h2>${esc(fam.full)}</h2></div></div>
     ${fam.desc ? `<p class="prose">${esc(fam.desc)}</p>` : ""}
     ${section("Common effects", effectList(f, 8, true))}
-    ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles && mainRole(d) ? esc(mainRole(d).role + " · " + mainRole(d).sub) : ""))))}
+    ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles ? esc([d.roles.join(", "), fnText(d)].filter(Boolean).join(" · ")) : ""))))}
     ${section("Family relics", relicCards(relicsOfFamilyPool(f)))}
     ${perDude}`;
 }

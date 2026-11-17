@@ -67,10 +67,15 @@ def main():
     pools = {"universal": {"name": "Universal", "icon": None},
              "promoter": {"name": "Promoter", "icon": icon("sp_ui_promoter_portrait", "pool promoter", "convention")}}
 
-    # synergy v2 (extract tools/effect_tags.py): facets per effect, derived roles, unit edges, effect-level links
+    # synergy v2 (extract tools/effect_tags.py): facets per effect, unit edges, effect-level links
     syn = E["synergy"]
     fx = lambda x: [[f["facet"], f["ch"], f["scope"]] for f in x.get("facets", []) if not f.get("implicit")]
-    roles = {u: [[r["role"], r["sub_role"], r["n"], int(r["ability"])] for r in rs] for u, rs in syn["roles"].items()}
+    # Role = the game's own (DudeType.roles, extract tools/game_roles.py); Function / Focus = our per-effect
+    # category, derived from code (extract tools/code_tags.py, rule A-tags-from-code). Surfaced separately.
+    GR = json.load(open(os.path.join(X, "data", "game_roles.json"), encoding="utf-8"))
+    roles = {t: [GR["role_names"][r] for r in v["roles"]] for t, v in GR["dudes"].items()}
+    CT = json.load(open(os.path.join(X, "data", "code_tags.json"), encoding="utf-8"))["effects"]
+    fn = lambda k: [CT[k]["function"], CT[k]["focus"]] if CT.get(k, {}).get("function") else None
 
     dudes = []
     for d in E["dudes"]:
@@ -79,7 +84,7 @@ def main():
         a = d["art"]
         dudes.append({"t": d["type"], "name": d["name"], "fam": d["families"] or [GLOBAL],
                       "ab": d["ability"]["name"], "seg": d["segments"], "fx": fx(d),
-                      "roles": roles.get("dude:" + d["type"], []),
+                      "roles": roles.get(d["type"], []), "fn": fn("dude:" + d["type"]),
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})
 
     relics = []
@@ -87,7 +92,8 @@ def main():
         a = r["art"]
         if not r["desc"]:
             warnings.append("relic %s has no description" % r["id"])
-        relics.append({"id": r["id"], "name": r["name"], "seg": r["segments"], "fx": fx(r), "pool": r["pool"],
+        relics.append({"id": r["id"], "name": r["name"], "seg": r["segments"], "fx": fx(r), "fn": fn("relic:" + r["id"]),
+                       "pool": r["pool"],
                        "fam": r["family"] or (GLOBAL if r["pool"] in ("universal", "promoter") else None), "dude": r["dude"],
                        "icon": icon(a["sprite"], "relic " + r["id"], a["provenance"])})
 

@@ -36,6 +36,10 @@
 - 2026-11-17 (2): all 1186 token numbers filled. Every relic is tied to its struct by code (277 by the RelicInfo
   creation call, 154 by id string); consumable relics read CONSUMABLE_RELIC_DISCOUNT (50%), Nuclear Codes its
   NuclearCodeVariables block. Fix: Ablative Shield = 100% of Healing, Great Helm = 3% Max HP (were swapped).
+- 2026-11-17 (3): Roles replaced. A Dude's Role is now the game's own (Tank, AOE, Single Target, Healing, Control;
+  extract game_roles.json); the Dudes filter uses them. Our categories became Function / Focus (Offense, Defense,
+  Support, Utility), derived from code (extract code_tags.json) and shown separately as tags on each ability and
+  relic; a Dude page lists his ability's tag plus the other ones his relics add ("+"). Old derived roles retired.
 
 ## Open
-- [ ] User review of derived roles and synergy edges in the app; refactor as needed.
+- [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
