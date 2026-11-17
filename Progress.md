@@ -30,7 +30,11 @@
 - 2026-11-14 (9): Draft view switch (saved): Offers (above) / Team. Team hides the offers and, under each Dude,
   lists his active effects (ability + picked relics + picked Family / universal / Promoter relics that apply to
   him) and his edges to the other Dudes' active effects.
+- 2026-11-17: token numbers 1166 of 1186 (was 1117). The extract now follows numbers passed into struct literals
+  from globals and simple arithmetic (Agent's Asset 8 s, Medic heal = HP_BASE x 0.1, Coach 60%) and ties universal
+  relics to their struct by the RelicInfo creation call. Every Dude ability is complete.
 
 ## Open
 - [ ] User review of derived roles and synergy edges in the app; refactor as needed.
-- [ ] Remaining 67 token numbers: constructor arguments fed from globals and a few tokens (speed, discount) outside the variables struct.
+- [ ] Remaining 20 token numbers: 4 consumable relics (Splitting Headache, Fairy Ring, Loaded Dice, Ion Storm) and
+  Nuclear Codes have no matched struct; Cosmic Geode discount, Unholy Grail damage.
