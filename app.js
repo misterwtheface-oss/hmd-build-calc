@@ -417,11 +417,12 @@ function dudeView(t) {
   if (!d) return null;
   const key = "dude:" + t;
   // Role (game) badges; then Function / Focus of his ability (solid) and the other ones his relics add (+)
-  // Role badges; the other Functions his relics add (+) below, by category (his ability's sits by its name)
+  // Role badges + his ability's Function in one row (also by the ability name); the other Functions his relics add
+  // (+) below, by category
   const extra = [...new Map(relicsOfDude(t).filter((r) => r.fn && fnText(r) !== fnText(d)).map((r) => [fnText(r), r])).values()]
     .sort((a, b) => fnRank(a) - fnRank(b));
-  const role = FEATURES.roles && (d.roles.length || extra.length)
-    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}${extra.length ? `<div class="tags">${extra
+  const role = FEATURES.roles && (d.roles.length || d.fn || extra.length)
+    ? `<div class="role"><div class="meta">${roleBadge(d)}${fnTag(d)}</div>${extra.length ? `<div class="tags">${extra
       .map((r) => fnTag(r, true))
       .join("")}</div>` : ""}</div>`
     : "";
