@@ -52,8 +52,48 @@ def icon(sprite, owner, provenance):
     return used[sprite]
 
 
+def app_icons():
+    """Installability (PWA tier 2): the game's Spell Book relic sprite (sp_relic_spell_book, not the game's own
+    launcher icon, user choice) on the crimson header field -> assets/app/*.png + manifest.webmanifest. Plain icons
+    fill ~78% of the tile; the maskable one keeps the art inside the 80% safe circle. Non-AI resize only (Lanczos).
+    A missing sprite is an error."""
+    src = os.path.join(SPR, "sp_relic_spell_book_0.png")
+    if not os.path.exists(src):
+        errors.append("app icon: sprite file missing %s" % src)
+        return
+    art = Image.open(src).convert("RGBA")
+    art = art.crop(art.getbbox())
+    out = os.path.join(APP, "assets", "app")
+    os.makedirs(out, exist_ok=True)
+    ver = {}
+    for fn, fill, px in (("icon-192.png", 0.78, 192), ("icon-512.png", 0.78, 512),
+                         ("icon-512-maskable.png", 0.56, 512), ("apple-touch-icon.png", 0.72, 180)):
+        p = os.path.join(out, fn)
+        tile = Image.new("RGBA", (px, px), (0x4f, 0x0e, 0x21, 255))
+        s = fill * px / max(art.size)
+        a = art.resize((round(art.width * s), round(art.height * s)), Image.LANCZOS)
+        tile.alpha_composite(a, ((px - a.width) // 2, (px - a.height) // 2))
+        tile.convert("RGB").save(p, "PNG", optimize=True)
+        ver[fn] = "assets/app/%s?v=%s" % (fn, hashlib.md5(open(p, "rb").read()).hexdigest()[:8])
+    man = {
+        "name": "How Many Dudes? Codex", "short_name": "HMD Codex",
+        "description": "Every Dude, Relic and Family of How Many Dudes?, with their synergies.",
+        "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
+        "background_color": "#171516", "theme_color": "#4f0e21",
+        "icons": [
+            {"src": ver["icon-192.png"], "sizes": "192x192", "type": "image/png"},
+            {"src": ver["icon-512.png"], "sizes": "512x512", "type": "image/png"},
+            {"src": ver["icon-512-maskable.png"], "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    with open(os.path.join(APP, "manifest.webmanifest"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(man, f, indent=2)
+        f.write("\n")
+
+
 def main():
     os.makedirs(OUT_ICONS, exist_ok=True)
+    app_icons()
     E = json.load(open(os.path.join(X, "data", "entities.json"), encoding="utf-8"))
 
     fams = []

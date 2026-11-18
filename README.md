@@ -12,6 +12,7 @@ Live: https://misterwtheface-oss.github.io/hmd-build-calc/
 ## Build
 ```
 python tools/build_data.py [--strict]   # reads ../_hmd_extract (local only), writes data.js + assets/icons + precache-list.json
+                                         # + manifest.webmanifest and assets/app install icons (Spell Book sprite)
 node tools/render_check.js               # renders every tab, filter and detail view; fails on errors or missing art
 node tools/serve.mjs                     # local preview; stop it when done
 ```
