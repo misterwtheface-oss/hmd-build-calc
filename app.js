@@ -11,9 +11,12 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const DUDE = Object.fromEntries(H.dudes.map((d) => [d.t, d]));
 const RELIC = Object.fromEntries(H.relics.map((r) => [r.id, r]));
 const FAM = Object.fromEntries(H.families.map((f) => [f.id, f]));
+// Trinkets (Trinket Stash): each is bound to one Dude Type for the rest of the run, the Wielder
+const TRINKET = Object.fromEntries(H.trinkets.map((t) => [t.id, t]));
 const byName = (a, b) => (a.name || "").localeCompare(b.name || "");
 const dudesSorted = H.dudes.filter((d) => d.name).sort(byName);
 const relicsSorted = H.relics.slice().sort(byName);
+const trinketsSorted = H.trinkets.slice().sort(byName);
 const relicsOfDude = (t) => relicsSorted.filter((r) => r.dude === t);
 const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool !== "dude" && r.fam === f);
 const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
@@ -28,8 +31,8 @@ const refsTo = (key) => H.refs.filter((e) => e.b === key);
 
 // Synergy (extract tools/effect_tags.py): every effect carries facets [facet, channel, scope]; an edge joins a unit
 // that gives / triggers a channel with a unit that scales with / reacts to it. A unit is a Dude together with his own
-// relics, or one Family / universal / Promoter relic. Rare channels (Taunt, Block) weigh more than common ones.
-const unitOf = (x) => (x.t ? "dude:" + x.t : x.pool === "dude" ? "dude:" + x.dude : "relic:" + x.id);
+// relics, one Family / universal / Promoter relic, or one Trinket. Rare channels (Taunt, Block) weigh more than common ones.
+const unitOf = (x) => (x.t ? "dude:" + x.t : x.pool === "dude" ? "dude:" + x.dude : keyOf(x));
 const CH = Object.fromEntries(H.chans.map((c) => [c.id, c]));
 const chWeight = (c) => CH[c]?.r || 0;
 const SYN = {};
@@ -42,14 +45,15 @@ const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On
 // channels an effect touches that link to another unit (shown as chips; the facet verb says how)
 const fxShown = (x) => x.fx.filter(([, c]) => CH[c]);
 // effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's,
-// give: this side provides the channel, so the other side (its consumer) receives it}]
+// give: this side provides the channel, so the other side (its consumer) receives it; wield: a trinket link that
+// holds only when the trinket is bound to that Dude}]
 const PAIR = {};
 {
   const { keys, names, fac, p } = H.pairs;
-  for (const [a, b, c, v, pf, cf] of p) {
-    const give = `${FACET[fac[pf]]} ${names[v]}`, use = `${FACET[fac[cf]]} ${names[c]}`;
-    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use, give: true });
-    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false });
+  for (const [a, b, c, v, pf, cf, w] of p) {
+    const give = `${FACET[fac[pf]]} ${names[v]}`, use = `${FACET[fac[cf]]} ${names[c]}`, wield = !!w;
+    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use, give: true, wield });
+    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false, wield });
   }
 }
 // the effects of a unit: a Dude's ability with every relic of his pool (he can hold them all), or one relic
@@ -112,7 +116,7 @@ const fnTag = (x) => (FEATURES.roles && x.fn ? `<span class="tag fn fn-${x.fn[0]
 // fams: show the Families the Dude / relic belongs to (synergy lists)
 const famsOf = (x) => (x.t ? x.fam : x.fam ? [x.fam] : []);
 function mini(x, sub, fams) {
-  const key = x.t ? "dude:" + x.t : "relic:" + x.id;
+  const key = keyOf(x);
   const tail = fams && famsOf(x).length ? `<span class="fams">${famsOf(x).map(famIcon).join("")}</span>` : "";
   return `<button class="mini" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}${sub ? `<small>${sub}</small>` : ""}</span>${tail}</button>`;
 }
@@ -164,8 +168,8 @@ function renderControls() {
   if (state.tab === "draft") return void ($("#controls").innerHTML = "");
   let html = `<input id="q" class="search" type="search" placeholder="Search" value="${esc(state.q)}" autocomplete="off">`;
   if (state.tab === "search") {
-    html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"]], state.kind);
-    html += filterChips("fam", famOpts, state.fam);
+    html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"], ["trinket", "Trinkets"]], state.kind);
+    if (state.kind !== "trinket") html += filterChips("fam", famOpts, state.fam);
     if (state.kind === "dude" && FEATURES.roles) html += filterChips("role", ROLES.map((r) => [r, r]), state.role);
     if (state.kind === "relic")
       html += filterChips("pool", [["dude", "Dude"], ["family", "Family"], ["universal", "Universal"], ["promoter", "Promoter"]], state.pool);
@@ -181,13 +185,16 @@ function renderList() {
   let rows = [];
   if (state.tab === "draft") return void ($("#list").innerHTML = renderDraft());
   if (state.tab === "search") {
-    const ds = state.kind === "relic" ? [] : dudesSorted
+    const kind = (k) => !state.kind || state.kind === k;
+    const ds = !kind("dude") ? [] : dudesSorted
       .filter((d) => (!state.fam || d.fam.includes(state.fam)) && (!state.role || hasRole(d, state.role)))
       .filter((d) => match(q, d.name, d.ab, segText(d.seg)));
-    const rs = state.kind === "dude" ? [] : relicsSorted
+    const rs = !kind("relic") ? [] : relicsSorted
       .filter((r) => (!state.fam || r.fam === state.fam) && (!state.pool || r.pool === state.pool))
       .filter((r) => match(q, r.name, segText(r.seg), poolLabel(r)));
-    rows = [...ds, ...rs].map((x) => itemRow(x));
+    const ts = !kind("trinket") || (state.fam && state.kind !== "trinket") ? [] : trinketsSorted
+      .filter((t) => match(q, t.name, segText(t.seg), poolLabel(t)));
+    rows = [...ds, ...rs, ...ts].map((x) => itemRow(x));
   } else if (state.tab === "families") {
     const cards = H.families
       .filter((f) => match(q, f.name, f.desc, ...membersOf(f.id).map((d) => d.name)))
@@ -195,6 +202,11 @@ function renderList() {
         (f) => `<button class="famcard" data-open="family:${f.id}"><span class="head">${img(f.icon, f.name)}<span>${esc(f.name)}</span></span>
         ${effectList(f.id, 3, false)}</button>`
       );
+    // the Trinket Stash after the Families: every Trinket, bound to one Dude Type per run
+    const stash = H.pools.trinket;
+    if (match(q, "Trinket Stash", ...trinketsSorted.map((t) => t.name)))
+      cards.push(`<button class="famcard" data-open="stash:all"><span class="head">${img(stash.icon, "Trinket Stash")}<span>Trinket Stash</span></span>
+        ${effectBars(itemEffects(trinketsSorted, 3), false)}</button>`);
     $("#list").innerHTML = cards.length ? `<div class="famgrid">${cards.join("")}</div>` : `<div class="empty">No matches</div>`;
     return;
   } else {
@@ -219,10 +231,10 @@ function itemRow(x, attr) {
 }
 
 /* ---------- draft: up to 3 offers (as the game presents them) scored against the saved build ---------- */
-const keyOf = (x) => (x.t ? "dude:" + x.t : "relic:" + x.id);
+const keyOf = (x) => (x.t ? "dude:" + x.t : x.pool === "trinket" ? "trinket:" + x.id : "relic:" + x.id);
 const itemOf = (key) => {
   const [k, id] = key.split(":");
-  return k === "dude" ? DUDE[id] : RELIC[id];
+  return k === "dude" ? DUDE[id] : k === "trinket" ? TRINKET[id] : RELIC[id];
 };
 const SLOTS = 3;
 const DRAFT_KEY = "hmd.draft";
@@ -234,12 +246,23 @@ const draft = (() => {
     build: Array.isArray(d?.build) ? d.build.filter(ok) : [],
     slots: Array.from({ length: SLOTS }, (_, i) => (ok(d?.slots?.[i]) ? d.slots[i] : null)),
     view: d?.view === "team" ? "team" : "offers",   // Offers: score offers against the build; Team: the build itself
+    // Trinket Stash: Dude Type -> the trinket bound to it (one each); wpick = the Dude whose trinket picker is open
+    wield: Object.fromEntries(Object.entries(d?.wield || {}).filter(([t, id]) => DUDE[t] && TRINKET[id])),
+    wpick: null,
   };
 })();
 const saveDraft = () => {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage off */ }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, wpick: null })); } catch (e) { /* storage off */ }
 };
 
+// a pair joining a trinket with a Dude's own effect (wield) holds only when that trinket is bound to him
+const holderOf = (tk) => Object.keys(draft.wield).find((t) => "trinket:" + draft.wield[t] === tk);
+function pairOk(l, a, b) {
+  if (!l.wield) return true;
+  const tk = a.startsWith("trinket:") ? a : b;
+  return "dude:" + holderOf(tk) === unitOf(itemOf(tk === a ? b : a));
+}
+const wieldKeys = (d) => (draft.wield[d.t] ? ["trinket:" + draft.wield[d.t]] : []);
 const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) => f !== "global" && FAM[f]);
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build) {
@@ -267,17 +290,18 @@ function overlap(x, build) {
   // its Dude (his ability and all his relics) or its Family (relics of a Family the build has a member of, or picked)
   const newFx = x.t ? effectsOfUnit(mine) : [k];
   const owner = new Map();
-  for (const d of team) if ("dude:" + d.t !== mine) for (const e of effectsOfUnit("dude:" + d.t)) owner.set(e, d);
+  for (const d of team) if ("dude:" + d.t !== mine) for (const e of [...effectsOfUnit("dude:" + d.t), ...wieldKeys(d)]) owner.set(e, d);
   for (const r of [...fams.flatMap(relicsOfFamilyPool), ...items.filter((b) => b.id && b.pool !== "dude")])
     if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), groupOf(r));
   // sections: the offer (what it receives), each build Dude (what he receives from the offer), each Family the
   // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
   const self = new Map(), dudeRows = new Map(), famRows = new Map();
   const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
+  const offered = x.pool === "trinket";        // a trinket offer: each Dude's row = binding it to him
   for (const s of newFx)
     for (const l of PAIR[s] || []) {
       const h = owner.get(l.o);
-      if (!h) continue;
+      if (!h || (!offered && !pairOk(l, s, l.o))) continue;
       if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
       else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
     }
@@ -287,12 +311,14 @@ function overlap(x, build) {
     for (const r of relicsOfFamilyPool(f))
       for (const l of PAIR["relic:" + r.id] || []) {
         const h = owner.get(l.o);
-        if (h && h !== FAM[f]) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label);
+        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label);
       }
     out.secs.push({ head: FAM[f], rows: scoreRows(rows) });
   }
   out.secs.push({ rows: scoreRows(famRows) });
   for (const sec of out.secs) sec.score = sec.rows.reduce((a, r) => a + r.score, 0);
+  // a trinket goes to one Dude: it scores its best Dude, not all of them
+  if (offered) out.secs[1].score = out.secs[1].rows.length ? out.secs[1].rows[0].score : 0;
   // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
   const total = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   out.score = Math.round(total * 10) / 10;
@@ -320,7 +346,7 @@ function holders(src, ok, team) {
   const rows = new Map();
   for (const s of src)
     for (const l of PAIR[s] || []) {
-      if (!ok(l.o)) continue;
+      if (!ok(l.o) || !pairOk(l, s, l.o)) continue;
       const t = itemOf(l.o);
       const tu = unitOf(t);
       const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => appliesTo(t, d));
@@ -346,7 +372,7 @@ const secHtml = (sec) => (!sec.head ? holderRows(sec.rows) : !sec.rows.length ? 
 function slotHtml(i, best, max) {
   const key = draft.slots[i];
   if (!key)
-    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude or relic" autocomplete="off">
+    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude, relic or trinket" autocomplete="off">
       <div class="picks" id="picks-${i}"></div></div>`;
   const x = itemOf(key);
   const o = overlap(x, draft.build);
@@ -364,10 +390,10 @@ function slotHtml(i, best, max) {
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 
-// a Dude's active effects in the build: his ability, his picked relics, and every picked Family / universal /
-// Promoter relic that applies to him
+// a Dude's active effects in the build: his ability, his bound trinket, his picked relics, and every picked Family /
+// universal / Promoter relic that applies to him
 function activeOf(d, counts) {
-  return ["dude:" + d.t, ...Object.keys(counts).filter((k) => {
+  return ["dude:" + d.t, ...wieldKeys(d), ...Object.keys(counts).filter((k) => {
     const r = k.startsWith("relic:") && itemOf(k);
     return r && (r.pool === "dude" ? r.dude === d.t : appliesTo(r, d));
   })];
@@ -402,8 +428,17 @@ function renderDraft() {
   const fams = buildFams(dudeKeys.map(itemOf));
   const relicPicks = (rs) => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
     aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}</div>`;
+  // each Dude's trinket: the bound one (or the Stash icon, faded); tap to open the picker, tap a trinket to bind it
+  const wslot = (t) => {
+    const b = TRINKET[draft.wield[t]];
+    const pick = draft.wpick === t ? `<div class="rpicks">${trinketsSorted.map((x) => `<button class="rpick${draft.wield[t] === x.id ? " on" : ""}"
+      data-wbind="${t}|${x.id}" title="${esc(x.name)}" aria-pressed="${draft.wield[t] === x.id}">${img(x.icon, x.name)}</button>`).join("")}</div>` : "";
+    return `<div class="wield"><button class="rpick${b ? " on" : ""}" data-wpick="${t}" title="${esc(b ? b.name : "Trinket")}"
+      aria-expanded="${draft.wpick === t}">${b ? img(b.icon, b.name) : img(H.pools.trinket.icon, "Trinket")}</button>${b
+      ? `<button class="wname" data-open="trinket:${b.id}">${esc(b.name)}</button>` : ""}</div>${pick}`;
+  };
   const groups = [
-    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)))}${team
+    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${wslot(dk.slice(5))}${relicPicks(relicsOfDude(dk.slice(5)))}${team
       ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
     ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
     // last: Global, its Universal then Promoter relics, picked as they're collected
@@ -412,7 +447,7 @@ function renderDraft() {
   const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
-  const items = draft.build.map(itemOf);
+  const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => wieldKeys(itemOf(dk))).map(itemOf)];
   return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}
     <h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
@@ -423,8 +458,14 @@ function renderDraft() {
 function pickResults(i, q) {
   q = q.trim().toLowerCase();
   if (!q) return "";
-  const hits = [...dudesSorted, ...relicsSorted].filter((x) => match(q, x.name)).slice(0, 8);
+  const hits = [...dudesSorted, ...relicsSorted, ...trinketsSorted].filter((x) => match(q, x.name)).slice(0, 8);
   return hits.map((x) => itemRow(x, `data-pick="${i}|${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
+}
+
+// one trinket per Dude Type, and a trinket is bound to one Dude Type at a time
+function bind(t, id) {
+  for (const k of Object.keys(draft.wield)) if (draft.wield[k] === id) delete draft.wield[k];
+  draft.wield[t] = id;
 }
 
 function offer(key) {
@@ -435,7 +476,7 @@ function offer(key) {
 /* ---------- detail views ---------- */
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
-  return `<div class="rcard"><button class="rhead" data-open="relic:${r.id}">${img(r.icon, r.name)}<span>${esc(r.name)}</span>${fnTag(r)}</button>
+  return `<div class="rcard"><button class="rhead" data-open="${keyOf(r)}">${img(r.icon, r.name)}<span>${esc(r.name)}</span>${fnTag(r)}</button>
     <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
@@ -525,17 +566,34 @@ function chView(c) {
     ${section(ch.stat ? "Scales with it" : "Reacts to it", side(ch.use))}`;
 }
 
-const VIEWS = { dude: dudeView, relic: relicView, family: familyView, ch: chView };
+// a Trinket: its effect and the units it links to (a Wielder effect meets the Dude it is bound to)
+function trinketView(id) {
+  const t = TRINKET[id];
+  if (!t) return null;
+  const linked = (H.links["trinket:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
+  return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2><div class="meta"><button class="chiplink" data-open="stash:all">${poolIcon(t)}Trinket Stash</button></div></div></div>
+    <div class="desc">${renderSegs(t.seg)}${FEATURES.synergy ? fxLine(t) : ""}</div>
+    ${FEATURES.synergy ? section("Synergies", grid(linked)) : ""}`;
+}
+// the Trinket Stash: every Trinket
+function stashView() {
+  const stash = H.pools.trinket;
+  return `<div class="hero">${img(stash.icon, "Trinket Stash")}<div><h2>Trinket Stash</h2></div></div>
+    ${section("Common effects", effectBars(itemEffects(trinketsSorted, 8), true))}
+    ${section("Trinkets", relicCards(trinketsSorted))}`;
+}
+
+const VIEWS = { dude: dudeView, relic: relicView, trinket: trinketView, stash: stashView, family: familyView, ch: chView };
 
 /* ---------- routing: #tab or #kind:id (overlay) ---------- */
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  const m = h.match(/^(dude|relic|family|ch):(.+)$/);
+  const m = h.match(/^(dude|relic|trinket|stash|family|ch):(.+)$/);
   if (m) {
     const html = VIEWS[m[1]](m[2]);
     if (html) {
       $("#detail").innerHTML = html;
-      $("#headact").innerHTML = m[1] === "dude" || m[1] === "relic" ? offerBtn(m[1] + ":" + m[2]) : "";
+      $("#headact").innerHTML = m[1] === "dude" || m[1] === "relic" || m[1] === "trinket" ? offerBtn(m[1] + ":" + m[2]) : "";
       $("#overlay").classList.remove("hidden");
       $("#overlay").setAttribute("aria-hidden", "false");
       $(".sheet").scrollTop = 0;
@@ -589,18 +647,36 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-wpick],[data-wbind]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
       const [i, key] = ds.pick.split("|");
       draft.slots[+i] = key;
     } else if (ds.take) {
-      draft.build.push(draft.slots[+ds.take]);
+      const key = draft.slots[+ds.take];
+      if (key.startsWith("trinket:")) {
+        // a taken trinket is bound to the Dude it fits best (rebind it in the build)
+        const top = overlap(itemOf(key), draft.build).secs[1].rows[0];
+        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:"))?.slice(5);
+        if (to) bind(to, key.slice(8));
+      } else draft.build.push(key);
       draft.slots.fill(null);
     } else if (ds.unslot) draft.slots[+ds.unslot] = null;
-    else if (ds.unbuild) draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
-    else if (ds.clearbuild) draft.build.length = 0;
+    else if (ds.unbuild) {
+      draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
+      if (!draft.build.includes(ds.unbuild)) delete draft.wield[ds.unbuild.slice(5)];
+    } else if (ds.clearbuild) {
+      draft.build.length = 0;
+      draft.wield = {};
+    }
+    else if (ds.wpick) draft.wpick = draft.wpick === ds.wpick ? null : ds.wpick;
+    else if (ds.wbind) {
+      const [t, id] = ds.wbind.split("|");
+      if (draft.wield[t] === id) delete draft.wield[t];
+      else bind(t, id);
+      draft.wpick = null;
+    }
     else if (ds.dview) draft.view = ds.dview;
     else if (ds.toggle) {
       // a picked relic leaves the build entirely (every copy), an unpicked one joins it

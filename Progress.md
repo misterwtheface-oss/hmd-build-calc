@@ -82,6 +82,16 @@
   caused: Snapback Sneakers = On Thrown only (hooks on_thrown_dude / on_thrown_end_dude); Zombie Dude loses
   On Knock Out (his faster recovery is not a trigger).
 
+- 2026-11-18 (9): Trinkets (Trinket Stash: bind one to a Dude Type for the run, the Wielder). Extract
+  tools/trinkets_map.py: 32 trinkets (init_trinkets 12 + init_full_game_trinkets 20), each tied to its struct by
+  the TrinketInfo creation call, every number from code, icons sp_tr_<name>. Tagged like relics ("Wielder" = the
+  holder); a Wielder link to a Dude's own effect holds only when the trinket is bound to him (pairs flag wield).
+  App: Trinket Stash card on Families + its page, Trinkets in Search, trinket pages, Draft: a trinket slot under
+  each Dude (tap, pick, tap again to unbind; one per Dude Type, one Dude per trinket), bound trinkets count in
+  scores / Team view / Build effects; a trinket offer scores its best Dude (rows = binding it to each Dude), Take
+  binds it there.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
+- [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
