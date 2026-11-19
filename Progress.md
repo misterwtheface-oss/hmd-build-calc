@@ -130,6 +130,10 @@
   Chance -> Block, Regeneration, Healing Received, Miss Chance, Crit Exposure, Multistrike; data.js `via`) showed as
   grey chips though their links existed; now railed, open the event's page and count in Effect edges / bars.
 
+- 2026-11-19 (5): Crit Damage scales with Crit Chance (user; decoded: the crit multiplier applies only after the
+  crit_chance roll in deal_damage / deal_aoe_damage / deal_attack_damage). Every Crit Damage giver links to the Crit
+  Chance givers it reaches (+473 effect links); its chip receives (left rail) and opens Crit Chance (data.js cvia).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

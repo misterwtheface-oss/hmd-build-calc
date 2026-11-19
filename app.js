@@ -39,8 +39,9 @@ const refsTo = (key) => H.refs.filter((e) => e.b === key);
 // relics, one Family / universal / Promoter relic, or one Trinket. Rare channels (Taunt, Block) weigh more than common ones.
 const unitOf = (x) => (x.t ? "dude:" + x.t : x.pool === "dude" ? "dude:" + x.dude : keyOf(x));
 const CH = Object.fromEntries(H.chans.map((c) => [c.id, c]));
-// the channel page an effect's channel links through: itself, or the event its stat causes (Deflection -> Deflect)
-const chOf = (c) => (CH[c] ? c : H.via[c]);
+// the channel page an effect's channel links through: itself, the event its stat causes (Deflection -> Deflect), or
+// the channel its value comes from (Crit Damage <- Crit Chance: that chip receives)
+const chOf = (c) => (CH[c] ? c : H.via[c] || H.cvia[c]);
 const chWeight = (c) => CH[c]?.r || 0;
 const SYN = {};
 for (const [a, b, score, chs] of H.syn) {
@@ -129,10 +130,11 @@ const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
 // an effect on a linked channel opens it; one nothing else gives / uses (Toughness ...) is a plain grey chip.
 // Order: granting (Gives, Triggers), then receiving (Scales, On, Boosts), then no interaction
-const fxChip = (f) => (chOf(f[1]) ? `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(chOf(f[1]))}">${esc(fxLabel(f))}</button>`
+const fxChip = (f) => (chOf(f[1]) ? `<button class="chiplink kw fx-${receives(f) ? "reacts" : f[0]}" data-open="ch:${encodeURIComponent(chOf(f[1]))}">${esc(fxLabel(f))}</button>`
   : `<span class="chiplink kw fx-none">${esc(fxLabel(f))}</span>`);
 const GRANTS = new Set(["gives", "emits"]);
-const fxSide = (f) => (!chOf(f[1]) ? 2 : GRANTS.has(f[0]) ? 0 : 1);
+const receives = (f) => !GRANTS.has(f[0]) || (!CH[f[1]] && !H.via[f[1]] && H.cvia[f[1]]);
+const fxSide = (f) => (!chOf(f[1]) ? 2 : receives(f) ? 1 : 0);
 const fxAll = (x) => x.fx.map((f, i) => [f, i]).sort((a, b) => fxSide(a[0]) - fxSide(b[0]) || a[1] - b[1]).map(([f]) => f);
 const fxChips = (x) => fxAll(x).map(fxChip).join("");
 const fxLine = (x) => (x.fx.length ? `<div class="chipline">${fxChips(x)}</div>` : "");
