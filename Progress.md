@@ -121,6 +121,11 @@
   linked ones (were hidden). Team view too. Chip order: granting (Gives, Triggers), receiving (Scales, On, Boosts), then grey. Rail = connector: granting teal on the right,
   receiving mustard on the left.
 
+- 2026-11-19 (3): DPS is fed by Attack Power and Attack Speed (user; reverses 2026-11-14 "DPS takes no stat
+  edge"). Decoded realtime_stats_refresh: dps_realtime = live Attack Power / (attack time / Attack Speed mult); no
+  Crit. The 44 "Scales DPS" effects (Cool Shades = 10 x dps_realtime) now link to every Attack Power / Attack Speed
+  giver they reach: +3722 effect links (8422 -> 12144).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
