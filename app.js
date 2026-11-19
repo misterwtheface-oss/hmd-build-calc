@@ -17,6 +17,12 @@ const relicsSorted = H.relics.slice().sort(byName);
 const relicsOfDude = (t) => relicsSorted.filter((r) => r.dude === t);
 const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool !== "dude" && r.fam === f);
 const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
+// relic sources outside a game Family (the game's collection groups): Universal (always in the pool) and Promoter
+// (won in the Promoter Dude's underground fights). The app's Global group holds both; a relic's group = its source
+const SOURCES = ["universal", "promoter"];
+const SOURCE = Object.fromEntries(SOURCES.map((p) => [p, { id: "global", src: p, name: H.pools[p].name, icon: H.pools[p].icon || FAM.global?.icon }]));
+const groupOf = (r) => SOURCE[r.pool] || FAM[r.fam];
+const relicsOfSource = (p) => relicsSorted.filter((r) => r.pool === p);
 const refsFrom = (key) => H.refs.filter((e) => e.a === key);
 const refsTo = (key) => H.refs.filter((e) => e.b === key);
 
@@ -263,7 +269,7 @@ function overlap(x, build) {
   const owner = new Map();
   for (const d of team) if ("dude:" + d.t !== mine) for (const e of effectsOfUnit("dude:" + d.t)) owner.set(e, d);
   for (const r of [...fams.flatMap(relicsOfFamilyPool), ...items.filter((b) => b.id && b.pool !== "dude")])
-    if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), FAM[r.fam]);
+    if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), groupOf(r));
   // sections: the offer (what it receives), each build Dude (what he receives from the offer), each Family the
   // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
   const self = new Map(), dudeRows = new Map(), famRows = new Map();
@@ -296,7 +302,7 @@ function overlap(x, build) {
 // pair rows: row key -> {x: its Dude / Family / offer, ch: channel -> {theirs: the row's effects, mine: the other
 // side's}, effect key -> facet labels}; a row scores the weight of each distinct channel it holds
 const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
-const headKey = (h) => (h.t ? "dude:" + h.t : FAM[h.id] === h ? "family:" + h.id : keyOf(h));
+const headKey = (h) => (h.t ? "dude:" + h.t : FAM[h.id] === h || h.src ? "family:" + h.id : keyOf(h));
 function putPair(rows, h, ch, own, ownLabel, other, otherLabel) {
   const hk = headKey(h);
   const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
@@ -499,7 +505,8 @@ function familyView(f) {
     ${fam.desc ? `<p class="prose">${esc(fam.desc)}</p>` : ""}
     ${section("Common effects", effectList(f, 8, true))}
     ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles ? esc([d.roles.join(", "), fnText(d)].filter(Boolean).join(" · ")) : ""))))}
-    ${section("Family relics", relicCards(relicsOfFamilyPool(f)))}
+    ${f === "global" ? SOURCES.map((p) => section(SOURCE[p].name + " relics", relicCards(relicsOfSource(p)))).join("")
+      : section("Family relics", relicCards(relicsOfFamilyPool(f)))}
     ${perDude}`;
 }
 

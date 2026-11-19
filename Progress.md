@@ -70,6 +70,10 @@
   (deal_damage direct = true). Six Shooter (deal_aoe_damage, never Direct), Intercom and Special Sauce's healing
   crits stay plain Crit.
 
+- 2026-11-18 (6): Global split by source (the game's collection groups, english.json collectibles_*): Universal
+  (24, init_relics, always in the pool) and Promoter (8, init_promoter_relics, won in the Promoter Dude's underground
+  fights). Global page lists them in two sections; Draft rows show Universal / Promoter instead of Global.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
