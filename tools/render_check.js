@@ -37,7 +37,7 @@ const famIds = H.families.map((f) => f.id);
 for (const t of TABS) {
   const combos = [{}];
   if (t.id === "search") {
-    ["dude", "relic", "trinket"].forEach((k) => combos.push({ kind: k }));
+    ["dude", "relic", "trinket", "food"].forEach((k) => combos.push({ kind: k }));
     famIds.forEach((f) => combos.push({ fam: f }));
     ["Damage", "Tank", "Support", "Utility"].forEach((r) => combos.push({ kind: "dude", role: r }));
     ["dude", "family", "universal", "promoter"].forEach((p) => combos.push({ kind: "relic", pool: p }));
@@ -48,12 +48,14 @@ for (const t of TABS) {
   }
 }
 // draft: every Dude and relic as an offer, against an empty build and against a mixed build
-const all = [...H.dudes.filter((d) => d.name), ...H.relics, ...H.trinkets].map(keyOf);
+const all = [...H.dudes.filter((d) => d.name), ...H.relics, ...H.trinkets, ...H.food].map(keyOf);
 state.tab = "draft";
 for (const build of [[], ["dude:basketball", "dude:basketball", "relic:r_jump_shoes", "dude:coach", "relic:ancient_sword"]]) {
   draft.build.splice(0, draft.build.length, ...build);
   draft.wield = build.length ? { basketball: H.trinkets[0].id, coach: H.trinkets[1].id } : {};
-  draft.wpick = build.length ? "coach" : null;   // one trinket picker open
+  draft.food = build.length ? { basketball: { id: H.food[0].id, sec: H.foodstats[3].id }, coach: { id: H.food[1].id, sec: null } } : {};
+  draft.hpick = build.length ? "trinket|coach" : null;   // one held-item picker open
+  draft.slotSec = [H.foodstats[0].id, null, H.foodstats[5].id];   // offered meals: one with an extra stat chosen
   for (let i = 0; i < all.length; i += 3) {
     draft.slots.splice(0, 3, all[i] || null, all[i + 1] || null, all[i + 2] || null);
     tryRender(`draft ${build.length} ${all[i]}`, () => { renderList(); return els["#list"].innerHTML; });
@@ -67,6 +69,7 @@ for (let i = 0; i < named.length; i += 3) {
   const rel = H.relics.filter((r) => (r.pool === "dude" ? ds.some((d) => d.t === r.dude) : r.fam === "global" || ds.some((d) => d.fam.includes(r.fam))));
   draft.build.splice(0, draft.build.length, ...ds.map(keyOf), ...rel.map(keyOf));
   draft.wield = Object.fromEntries(ds.map((d, j) => [d.t, H.trinkets[(i + j) % H.trinkets.length].id]));
+  draft.food = Object.fromEntries(ds.map((d, j) => [d.t, { id: H.food[(i + j) % H.food.length].id, sec: H.foodstats[(i + j) % H.foodstats.length].id }]));
   tryRender(`team ${ds.map((d) => d.t)}`, () => { renderList(); return els["#list"].innerHTML; });
 }
 draft.view = "offers";
@@ -77,6 +80,9 @@ for (const d of H.dudes) tryRender(`dude ${d.t}`, () => VIEWS.dude(d.t));
 for (const r of H.relics) tryRender(`relic ${r.id}`, () => VIEWS.relic(r.id));
 for (const t of H.trinkets) tryRender(`trinket ${t.id}`, () => VIEWS.trinket(t.id));
 tryRender("stash", () => VIEWS.stash("all"));
+for (const m of H.food) tryRender(`food ${m.id}`, () => VIEWS.food(m.id));
+tryRender("meals", () => VIEWS.meals("all"));
+tryRender("foodstat", () => VIEWS.foodstat(H.foodstats[0].id));
 for (const f of H.families) tryRender(`family ${f.id}`, () => VIEWS.family(f.id));
 for (const c of H.chans) tryRender(`ch ${c.id}`, () => VIEWS.ch(c.id));
 

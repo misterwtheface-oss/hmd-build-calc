@@ -13,10 +13,15 @@ const RELIC = Object.fromEntries(H.relics.map((r) => [r.id, r]));
 const FAM = Object.fromEntries(H.families.map((f) => [f.id, f]));
 // Trinkets (Trinket Stash): each is bound to one Dude Type for the rest of the run, the Wielder
 const TRINKET = Object.fromEntries(H.trinkets.map((t) => [t.id, t]));
+// Food (Food Dude): a meal for one Dude Type = its main stat, plus one extra stat (foodstat) rolled with the offer
+for (const st of H.foodstats) st.icon = H.pools.food.icon;
+const FOOD = Object.fromEntries(H.food.map((m) => [m.id, m]));
+const FOODSTAT = Object.fromEntries(H.foodstats.map((m) => [m.id, m]));
 const byName = (a, b) => (a.name || "").localeCompare(b.name || "");
 const dudesSorted = H.dudes.filter((d) => d.name).sort(byName);
 const relicsSorted = H.relics.slice().sort(byName);
 const trinketsSorted = H.trinkets.slice().sort(byName);
+const foodSorted = H.food.slice().sort(byName);
 const relicsOfDude = (t) => relicsSorted.filter((r) => r.dude === t);
 const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool !== "dude" && r.fam === f);
 const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
@@ -168,8 +173,8 @@ function renderControls() {
   if (state.tab === "draft") return void ($("#controls").innerHTML = "");
   let html = `<input id="q" class="search" type="search" placeholder="Search" value="${esc(state.q)}" autocomplete="off">`;
   if (state.tab === "search") {
-    html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"], ["trinket", "Trinkets"]], state.kind);
-    if (state.kind !== "trinket") html += filterChips("fam", famOpts, state.fam);
+    html += filterChips("kind", [["dude", "Dudes"], ["relic", "Relics"], ["trinket", "Trinkets"], ["food", "Food"]], state.kind);
+    if (!(state.kind in HELD)) html += filterChips("fam", famOpts, state.fam);
     if (state.kind === "dude" && FEATURES.roles) html += filterChips("role", ROLES.map((r) => [r, r]), state.role);
     if (state.kind === "relic")
       html += filterChips("pool", [["dude", "Dude"], ["family", "Family"], ["universal", "Universal"], ["promoter", "Promoter"]], state.pool);
@@ -192,9 +197,8 @@ function renderList() {
     const rs = !kind("relic") ? [] : relicsSorted
       .filter((r) => (!state.fam || r.fam === state.fam) && (!state.pool || r.pool === state.pool))
       .filter((r) => match(q, r.name, segText(r.seg), poolLabel(r)));
-    const ts = !kind("trinket") || (state.fam && state.kind !== "trinket") ? [] : trinketsSorted
-      .filter((t) => match(q, t.name, segText(t.seg), poolLabel(t)));
-    rows = [...ds, ...rs, ...ts].map((x) => itemRow(x));
+    const held = (k, xs) => (!kind(k) || (state.fam && state.kind !== k) ? [] : xs.filter((t) => match(q, t.name, segText(t.seg), poolLabel(t))));
+    rows = [...ds, ...rs, ...held("trinket", trinketsSorted), ...held("food", foodSorted)].map((x) => itemRow(x));
   } else if (state.tab === "families") {
     const cards = H.families
       .filter((f) => match(q, f.name, f.desc, ...membersOf(f.id).map((d) => d.name)))
@@ -207,6 +211,9 @@ function renderList() {
     if (match(q, "Trinket Stash", ...trinketsSorted.map((t) => t.name)))
       cards.push(`<button class="famcard" data-open="stash:all"><span class="head">${img(stash.icon, "Trinket Stash")}<span>Trinket Stash</span></span>
         ${effectBars(itemEffects(trinketsSorted, 3), false)}</button>`);
+    if (match(q, "Food Dude", ...foodSorted.map((m) => m.name)))
+      cards.push(`<button class="famcard" data-open="meals:all"><span class="head">${img(H.pools.food.icon, "Food Dude")}<span>Food Dude</span></span>
+        ${effectBars(itemEffects(foodSorted, 3), false)}</button>`);
     $("#list").innerHTML = cards.length ? `<div class="famgrid">${cards.join("")}</div>` : `<div class="empty">No matches</div>`;
     return;
   } else {
@@ -231,10 +238,11 @@ function itemRow(x, attr) {
 }
 
 /* ---------- draft: up to 3 offers (as the game presents them) scored against the saved build ---------- */
-const keyOf = (x) => (x.t ? "dude:" + x.t : x.pool === "trinket" ? "trinket:" + x.id : "relic:" + x.id);
+const BY_KIND = { dude: DUDE, relic: RELIC, trinket: TRINKET, food: FOOD, foodstat: FOODSTAT };
+const keyOf = (x) => (x.t ? "dude:" + x.t : ["trinket", "food", "foodstat"].includes(x.pool) ? x.pool + ":" + x.id : "relic:" + x.id);
 const itemOf = (key) => {
   const [k, id] = key.split(":");
-  return k === "dude" ? DUDE[id] : k === "trinket" ? TRINKET[id] : RELIC[id];
+  return (BY_KIND[k] || RELIC)[id];
 };
 const SLOTS = 3;
 const DRAFT_KEY = "hmd.draft";
@@ -246,26 +254,46 @@ const draft = (() => {
     build: Array.isArray(d?.build) ? d.build.filter(ok) : [],
     slots: Array.from({ length: SLOTS }, (_, i) => (ok(d?.slots?.[i]) ? d.slots[i] : null)),
     view: d?.view === "team" ? "team" : "offers",   // Offers: score offers against the build; Team: the build itself
-    // Trinket Stash: Dude Type -> the trinket bound to it (one each); wpick = the Dude whose trinket picker is open
+    // Trinket Stash: Dude Type -> the trinket bound to it (one each, no duplicates)
     wield: Object.fromEntries(Object.entries(d?.wield || {}).filter(([t, id]) => DUDE[t] && TRINKET[id])),
-    wpick: null,
+    // Food Dude: Dude Type -> {id: meal, sec: its extra stat}; slotSec = the extra stat of a meal offered in slot i
+    food: Object.fromEntries(Object.entries(d?.food || {}).filter(([t, v]) => DUDE[t] && FOOD[v?.id])
+      .map(([t, v]) => [t, { id: v.id, sec: FOODSTAT[v.sec] ? v.sec : null }])),
+    slotSec: Array.from({ length: SLOTS }, (_, i) => (FOODSTAT[d?.slotSec?.[i]] ? d.slotSec[i] : null)),
+    hpick: null,   // "kind|dude type" whose held-item picker is open
   };
 })();
 const saveDraft = () => {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, wpick: null })); } catch (e) { /* storage off */ }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, hpick: null })); } catch (e) { /* storage off */ }
 };
 
-// a pair joining a trinket with a Dude's own effect (wield) holds only when that trinket is bound to him
-const holderOf = (tk) => Object.keys(draft.wield).find((t) => "trinket:" + draft.wield[t] === tk);
+// held items: what a Dude Type holds for the run, one of each kind. A trinket is never on two Dudes; a meal can be
+const HELD = {
+  trinket: { items: () => trinketsSorted, unique: true, map: () => draft.wield, get: (t) => draft.wield[t] },
+  food: { items: () => foodSorted, unique: false, map: () => draft.food, get: (t) => draft.food[t]?.id },
+};
+const isHeld = (k) => /^(trinket|food|foodstat):/.test(k);
+const boundTo = (kind, id) => Object.keys(HELD[kind].map()).find((t) => HELD[kind].get(t) === id);
+// a Dude's held effects: his trinket, his meal and its extra stat
+const heldKeys = (d) => [...(draft.wield[d.t] ? ["trinket:" + draft.wield[d.t]] : []),
+  ...(draft.food[d.t] ? ["food:" + draft.food[d.t].id, ...(draft.food[d.t].sec ? ["foodstat:" + draft.food[d.t].sec] : [])] : [])];
+// a pair joining a held effect with a Dude's own effect (wield) holds only when that Dude holds it
 function pairOk(l, a, b) {
   if (!l.wield) return true;
-  const tk = a.startsWith("trinket:") ? a : b;
-  return "dude:" + holderOf(tk) === unitOf(itemOf(tk === a ? b : a));
+  const hk = isHeld(a) ? a : b;
+  const u = unitOf(itemOf(hk === a ? b : a));
+  return u.startsWith("dude:") && heldKeys(DUDE[u.slice(5)]).includes(hk);
 }
-const wieldKeys = (d) => (draft.wield[d.t] ? ["trinket:" + draft.wield[d.t]] : []);
+function bind(kind, t, id, sec) {
+  if (kind === "trinket") {
+    for (const k of Object.keys(draft.wield)) if (draft.wield[k] === id) delete draft.wield[k];
+    draft.wield[t] = id;
+  } else draft.food[t] = { id, sec: sec !== undefined ? sec : draft.food[t]?.sec || null };
+}
+const unbind = (kind, t) => delete HELD[kind].map()[t];
 const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) => f !== "global" && FAM[f]);
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
-function overlap(x, build) {
+function overlap(x, build, sec) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
   const out = { fam: [], links: [], secs: [], score: 0 };
@@ -288,23 +316,24 @@ function overlap(x, build) {
   const fams = buildFams(team);
   // the offer's effects (a Dude: his ability and all his relics); the build's, each under the row it scores in:
   // its Dude (his ability and all his relics) or its Family (relics of a Family the build has a member of, or picked)
-  const newFx = x.t ? effectsOfUnit(mine) : [k];
+  const newFx = x.t ? effectsOfUnit(mine) : x.pool === "food" ? [k, ...(sec ? ["foodstat:" + sec] : [])] : [k];
   const owner = new Map();
-  for (const d of team) if ("dude:" + d.t !== mine) for (const e of [...effectsOfUnit("dude:" + d.t), ...wieldKeys(d)]) owner.set(e, d);
+  for (const d of team) if ("dude:" + d.t !== mine) for (const e of [...effectsOfUnit("dude:" + d.t), ...heldKeys(d)]) owner.set(e, d);
   for (const r of [...fams.flatMap(relicsOfFamilyPool), ...items.filter((b) => b.id && b.pool !== "dude")])
     if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), groupOf(r));
   // sections: the offer (what it receives), each build Dude (what he receives from the offer), each Family the
   // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
   const self = new Map(), dudeRows = new Map(), famRows = new Map();
   const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
-  const offered = x.pool === "trinket";        // a trinket offer: each free Dude's row = binding it to him (one each)
+  const offered = x.pool in HELD;              // a held-item offer: each free Dude's row = giving it to him (one each)
+  const taken = (t) => offered && HELD[x.pool].get(t);
   for (const s of newFx)
     for (const l of PAIR[s] || []) {
       const h = owner.get(l.o);
-      if (!h || (!offered && !pairOk(l, s, l.o)) || (offered && h.t && draft.wield[h.t])) continue;
+      if (!h || (!offered && !pairOk(l, s, l.o)) || (h.t && taken(h.t))) continue;
       if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
       // a trinket offer only meets drafted Dudes: a Family / Global relic counts in the row of each Dude it applies to
-      else if (offered && !h.t) for (const d of team.filter((d) => !draft.wield[d.t] && appliesTo(itemOf(l.o), d))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
+      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t) && appliesTo(itemOf(l.o), d))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
       else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
     }
   out.secs.push({ rows: scoreRows(self) }, { rows: scoreRows(dudeRows) });
@@ -319,7 +348,7 @@ function overlap(x, build) {
   }
   out.secs.push({ rows: scoreRows(famRows) });
   for (const sec of out.secs) sec.score = sec.rows.reduce((a, r) => a + r.score, 0);
-  // a trinket goes to one Dude: it scores its best Dude, not all of them
+  // a held item goes to one Dude: it scores its best Dude, not all of them
   if (offered) out.secs[1].score = out.secs[1].rows.length ? out.secs[1].rows[0].score : 0;
   // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
   const total = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
@@ -371,13 +400,17 @@ const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="h
 const secHtml = (sec) => (!sec.head ? holderRows(sec.rows) : !sec.rows.length ? "" : `<div class="hold"><button class="hhead" data-open="family:${sec.head.id}">${img(sec.head.icon, sec.head.name)}<span>${esc(sec.head.name)}</span><b>${num1(sec.score)}</b></button>
     ${holderRows(sec.rows)}</div>`);
 
+// a meal's extra stat: one chip per stat (its value as the extra stat), the chosen one pressed
+const statChips = (attr, who, cur) => `<div class="chips wsec">${H.foodstats.map((st) => `<button class="fchip" data-${attr}="${who}|${st.id}"
+  aria-pressed="${cur === st.id}">${esc(st.name)} ${esc(segText(st.seg.filter((g) => g[0] === "v")))}</button>`).join("")}</div>`;
+
 function slotHtml(i, best, max) {
   const key = draft.slots[i];
   if (!key)
-    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude, relic or trinket" autocomplete="off">
+    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude, relic, trinket or food" autocomplete="off">
       <div class="picks" id="picks-${i}"></div></div>`;
   const x = itemOf(key);
-  const o = overlap(x, draft.build);
+  const o = overlap(x, draft.build, draft.slotSec[i]);
   const label = x.t ? x.fam.map(famIcon).join("") : poolIcon(x);
   const text = (x.ab ? `<div class="ab">${esc(x.ab)}${fnTag(x)}</div>` : "") + renderSegs(x.seg);
   const ov = [
@@ -387,7 +420,7 @@ function slotHtml(i, best, max) {
   return `<div class="slot${o.score === best ? " best" : ""}">
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span>${x.t ? "" : fnTag(x)}</button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
-    <div class="rdesc">${text}</div>
+    <div class="rdesc">${text}</div>${x.pool === "food" ? statChips("fsec", i, draft.slotSec[i]) : ""}
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.map(secHtml).join("")}` : ""}
     <button class="take" data-take="${i}">Take</button></div>`;
 }
@@ -395,7 +428,7 @@ function slotHtml(i, best, max) {
 // a Dude's active effects in the build: his ability, his bound trinket, his picked relics, and every picked Family /
 // universal / Promoter relic that applies to him
 function activeOf(d, counts) {
-  return ["dude:" + d.t, ...wieldKeys(d), ...Object.keys(counts).filter((k) => {
+  return ["dude:" + d.t, ...heldKeys(d), ...Object.keys(counts).filter((k) => {
     const r = k.startsWith("relic:") && itemOf(k);
     return r && (r.pool === "dude" ? r.dude === d.t : appliesTo(r, d));
   })];
@@ -414,7 +447,7 @@ function renderDraft() {
   const view = `<div class="chips dview">${[["offers", "Offers"], ["team", "Team"]]
     .map(([v, n]) => `<button class="fchip" data-dview="${v}" aria-pressed="${draft.view === v}">${n}</button>`).join("")}</div>`;
   const team = draft.view === "team";
-  const ovs = team ? [] : draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build) : null));
+  const ovs = team ? [] : draft.slots.map((k, i) => (k ? overlap(itemOf(k), draft.build, draft.slotSec[i]) : null));
   const scores = ovs.map((o) => (o ? o.score : -1));
   const max = Math.max(0, ...scores);
 
@@ -430,16 +463,18 @@ function renderDraft() {
   const fams = buildFams(dudeKeys.map(itemOf));
   const relicPicks = (rs) => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
     aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}</div>`;
-  // each Dude's trinket: the bound one (or the Stash icon, faded); tap to open the picker, tap a trinket to bind it
-  const wslot = (t) => {
-    const b = TRINKET[draft.wield[t]];
-    // no duplicates: a trinket bound to another Dude is not offered here
-    const pick = draft.wpick === t ? `<div class="rpicks">${trinketsSorted.filter((x) => !holderOf("trinket:" + x.id) || draft.wield[t] === x.id).map((x) => `<button class="rpick${draft.wield[t] === x.id ? " on" : ""}"
-      data-wbind="${t}|${x.id}" title="${esc(x.name)}" aria-pressed="${draft.wield[t] === x.id}">${img(x.icon, x.name)}</button>`).join("")}</div>` : "";
-    return `<div class="wield"><button class="rpick${b ? " on" : ""}" data-wpick="${t}" title="${esc(b ? b.name : "Trinket")}"
-      aria-expanded="${draft.wpick === t}">${b ? img(b.icon, b.name) : img(H.pools.trinket.icon, "Trinket")}</button>${b
-      ? `<button class="wname" data-open="trinket:${b.id}">${esc(b.name)}</button>` : ""}</div>${pick}`;
+  // each Dude's held items (trinket, meal): the held one (or the kind's icon, faded); tap to open the picker, tap an
+  // item to give it to him, tap it again to take it back. A meal also shows its extra stat
+  const heldSlot = (t, kind) => {
+    const cur = HELD[kind].get(t), b = cur && itemOf(kind + ":" + cur), on = draft.hpick === kind + "|" + t;
+    const opts = HELD[kind].items().filter((x) => !HELD[kind].unique || !boundTo(kind, x.id) || cur === x.id);   // no duplicates
+    const pick = on ? `<div class="rpicks">${opts.map((x) => `<button class="rpick${cur === x.id ? " on" : ""}" data-hbind="${kind}|${t}|${x.id}"
+      title="${esc(x.name)}" aria-pressed="${cur === x.id}">${img(x.icon, x.name)}</button>`).join("")}</div>` : "";
+    return `<div class="wield"><button class="rpick${b ? " on" : ""}" data-hpick="${kind}|${t}" title="${esc(b ? b.name : H.pools[kind].name)}"
+      aria-expanded="${on}">${b ? img(b.icon, b.name) : img(H.pools[kind].icon, H.pools[kind].name)}</button>${b
+      ? `<button class="wname" data-open="${kind}:${b.id}">${esc(b.name)}</button>` : ""}</div>${pick}${kind === "food" && b ? statChips("hsec", t, draft.food[t].sec) : ""}`;
   };
+  const wslot = (t) => Object.keys(HELD).map((kind) => heldSlot(t, kind)).join("");
   const groups = [
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${wslot(dk.slice(5))}${relicPicks(relicsOfDude(dk.slice(5)))}${team
       ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
@@ -450,7 +485,7 @@ function renderDraft() {
   const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
-  const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => wieldKeys(itemOf(dk))).map(itemOf)];
+  const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => heldKeys(itemOf(dk))).map(itemOf)];
   return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}
     <h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
@@ -461,15 +496,9 @@ function renderDraft() {
 function pickResults(i, q) {
   q = q.trim().toLowerCase();
   if (!q) return "";
-  const free = trinketsSorted.filter((x) => !holderOf("trinket:" + x.id));   // a bound trinket can't be drafted again
-  const hits = [...dudesSorted, ...relicsSorted, ...free].filter((x) => match(q, x.name)).slice(0, 8);
+  const free = trinketsSorted.filter((x) => !boundTo("trinket", x.id));   // a bound trinket can't be drafted again
+  const hits = [...dudesSorted, ...relicsSorted, ...free, ...foodSorted].filter((x) => match(q, x.name)).slice(0, 8);
   return hits.map((x) => itemRow(x, `data-pick="${i}|${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
-}
-
-// one trinket per Dude Type, and a trinket is bound to one Dude Type at a time
-function bind(t, id) {
-  for (const k of Object.keys(draft.wield)) if (draft.wield[k] === id) delete draft.wield[k];
-  draft.wield[t] = id;
 }
 
 function offer(key) {
@@ -552,7 +581,8 @@ function familyView(f) {
     ${fam.desc ? `<p class="prose">${esc(fam.desc)}</p>` : ""}
     ${section("Common effects", effectList(f, 8, true))}
     ${section("Dudes", grid(members.map((d) => mini(d, FEATURES.roles ? esc([d.roles.join(", "), fnText(d)].filter(Boolean).join(" · ")) : ""))))}
-    ${f === "global" ? SOURCES.map((p) => section(SOURCE[p].name + " relics", relicCards(relicsOfSource(p)))).join("")
+    ${f === "global" ? SOURCES.map((p) => section(SOURCE[p].name + " relics", relicCards(relicsOfSource(p)))).join("") +
+      section("Trinkets", relicCards(trinketsSorted)) + section("Food", relicCards(foodSorted))
       : section("Family relics", relicCards(relicsOfFamilyPool(f)))}
     ${perDude}`;
 }
@@ -587,17 +617,40 @@ function stashView() {
     ${section("Trinkets", relicCards(trinketsSorted))}`;
 }
 
-const VIEWS = { dude: dudeView, relic: relicView, trinket: trinketView, stash: stashView, family: familyView, ch: chView };
+// a meal: its main stat, its synergy partners; the extra stat is rolled with the offer (Food Dude page)
+function foodView(id) {
+  const m = FOOD[id];
+  if (!m) return null;
+  const linked = (H.links["food:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
+  return `<div class="hero">${img(m.icon, m.name)}<div><h2>${esc(m.name)}</h2><div class="meta"><button class="chiplink" data-open="meals:all">${poolIcon(m)}Food Dude</button></div></div></div>
+    <div class="desc">${renderSegs(m.seg)}${FEATURES.synergy ? fxLine(m) : ""}</div>
+    ${FEATURES.synergy ? section("Synergies", grid(linked)) : ""}`;
+}
+// the Food Dude: every stat (as a meal's main stat, as the extra stat), then every meal
+const statVal = (x) => segText(x.seg.filter((g) => g[0] === "v"));
+function mealsView() {
+  const rows = H.foodstats.map((st) => {
+    const m = H.food.find((f) => f.stat === st.id);
+    return `<tr><td>${esc(st.name)}</td><td>${m ? `<button class="chiplink" data-open="food:${m.id}">${img(m.icon, m.name)}${esc(m.name)}</button>` : ""}</td>
+      <td class="num">${m ? esc(statVal(m)) : ""}</td><td class="num">${esc(statVal(st))}</td></tr>`;
+  }).join("");
+  return `<div class="hero">${img(H.pools.food.icon, "Food Dude")}<div><h2>Food Dude</h2></div></div>
+    <h3>Stats</h3><table class="stats"><tr><th>Stat</th><th>Meal</th><th class="num">Main</th><th class="num">Extra</th></tr>${rows}</table>
+    ${section("Meals", relicCards(foodSorted))}`;
+}
+
+const VIEWS = { dude: dudeView, relic: relicView, trinket: trinketView, stash: stashView, food: foodView, meals: mealsView,
+  foodstat: () => mealsView(), family: familyView, ch: chView };
 
 /* ---------- routing: #tab or #kind:id (overlay) ---------- */
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  const m = h.match(/^(dude|relic|trinket|stash|family|ch):(.+)$/);
+  const m = h.match(/^(dude|relic|trinket|stash|food|meals|foodstat|family|ch):(.+)$/);
   if (m) {
     const html = VIEWS[m[1]](m[2]);
     if (html) {
       $("#detail").innerHTML = html;
-      $("#headact").innerHTML = m[1] === "dude" || m[1] === "relic" || m[1] === "trinket" ? offerBtn(m[1] + ":" + m[2]) : "";
+      $("#headact").innerHTML = ["dude", "relic", "trinket", "food"].includes(m[1]) ? offerBtn(m[1] + ":" + m[2]) : "";
       $("#overlay").classList.remove("hidden");
       $("#overlay").setAttribute("aria-hidden", "false");
       $(".sheet").scrollTop = 0;
@@ -651,7 +704,7 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-wpick],[data-wbind]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hpick],[data-hbind],[data-hsec],[data-fsec]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
@@ -659,27 +712,40 @@ document.addEventListener("click", (e) => {
       draft.slots[+i] = key;
     } else if (ds.take) {
       const key = draft.slots[+ds.take];
-      if (key.startsWith("trinket:")) {
-        // a taken trinket is bound to the Dude it fits best (rebind it in the build)
-        const top = overlap(itemOf(key), draft.build).secs[1].rows[0];
-        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:") && !draft.wield[k.slice(5)])?.slice(5);
-        if (to && !holderOf(key)) bind(to, key.slice(8));
+      const [kind, id] = key.split(":");
+      if (HELD[kind]) {
+        // a taken trinket / meal goes to the free Dude it fits best (change it in the build)
+        const sec = draft.slotSec[+ds.take];
+        const top = overlap(itemOf(key), draft.build, sec).secs[1].rows[0];
+        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:") && !HELD[kind].get(k.slice(5)))?.slice(5);
+        if (to && !(HELD[kind].unique && boundTo(kind, id))) bind(kind, to, id, sec);
       } else draft.build.push(key);
       draft.slots.fill(null);
-    } else if (ds.unslot) draft.slots[+ds.unslot] = null;
+      draft.slotSec.fill(null);
+    } else if (ds.unslot) {
+      draft.slots[+ds.unslot] = null;
+      draft.slotSec[+ds.unslot] = null;
+    }
     else if (ds.unbuild) {
       draft.build.splice(draft.build.indexOf(ds.unbuild), 1);
-      if (!draft.build.includes(ds.unbuild)) delete draft.wield[ds.unbuild.slice(5)];
+      if (!draft.build.includes(ds.unbuild)) for (const kind in HELD) unbind(kind, ds.unbuild.slice(5));
     } else if (ds.clearbuild) {
       draft.build.length = 0;
       draft.wield = {};
+      draft.food = {};
     }
-    else if (ds.wpick) draft.wpick = draft.wpick === ds.wpick ? null : ds.wpick;
-    else if (ds.wbind) {
-      const [t, id] = ds.wbind.split("|");
-      if (draft.wield[t] === id) delete draft.wield[t];
-      else bind(t, id);
-      draft.wpick = null;
+    else if (ds.hpick) draft.hpick = draft.hpick === ds.hpick ? null : ds.hpick;
+    else if (ds.hbind) {
+      const [kind, t, id] = ds.hbind.split("|");
+      if (HELD[kind].get(t) === id) unbind(kind, t);
+      else bind(kind, t, id);
+      draft.hpick = null;
+    } else if (ds.hsec) {
+      const [t, st] = ds.hsec.split("|");
+      if (draft.food[t]) draft.food[t].sec = draft.food[t].sec === st ? null : st;
+    } else if (ds.fsec) {
+      const [i, st] = ds.fsec.split("|");
+      draft.slotSec[+i] = draft.slotSec[+i] === st ? null : st;
     }
     else if (ds.dview) draft.view = ds.dview;
     else if (ds.toggle) {

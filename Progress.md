@@ -95,6 +95,14 @@
   per Dude without a trinket, Family / Global relics folded into the row of each Dude they apply to; score = best
   Dude. One trinket per Dude, no duplicates: a bound trinket leaves the offer search and other Dudes' pickers.
 
+- 2026-11-18 (11): Food (Food Dude: a meal for one Dude Type for the run). Extract tools/food_map.py: 8 meals
+  (FoodType: main stat) and 12 stats (FoodStatValues: main value, extra value), numbers read from the shared
+  gs_constArg constants each call passes; every stat can roll as a meal's extra stat (FOOD_SECONDARY_STATS).
+  Tagged as held effects like trinkets (meal = main stat, foodstat = extra stat). App: one held-item path for
+  trinkets and meals: Food Dude card + page (stats table, meals), Food in Search, meal pages, Trinkets and Food on
+  the Global page; Draft: a Food slot under each Dude (meal + extra-stat chips), meal offers with an extra-stat
+  picker, scored on free Dudes only.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

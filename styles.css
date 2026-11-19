@@ -227,3 +227,11 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .pair small { color: var(--olive); font: 12px var(--narrow); }
 .pair .vi { padding: 0; border: 0; background: none; cursor: pointer; }
 .pair .vi img { width: 22px; height: 22px; display: block; }
+/* Food Dude: stats table (main / extra value per stat), a meal's extra-stat chips */
+table.stats { width: 100%; border-collapse: collapse; font: 14px var(--narrow); color: var(--cream); }
+table.stats th { text-align: left; color: var(--olive); font-weight: normal; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+table.stats td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
+table.stats .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.stats .chiplink img { width: 20px; height: 20px; }
+.wsec { margin: 4px 0 4px 14px; padding-left: 10px; border-left: 2px solid var(--line); }
+.wsec .fchip { font-variant-numeric: tabular-nums; }

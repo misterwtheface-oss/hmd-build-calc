@@ -1,5 +1,5 @@
 {
-"v": "a078635b",
+"v": "44076385",
 "urls": [
 "assets/icons/sp_famicon_action.webp?v=e427da37",
 "assets/icons/sp_famicon_employed.webp?v=8d5064b0",
@@ -8,6 +8,14 @@
 "assets/icons/sp_famicon_sports.webp?v=9129f2c2",
 "assets/icons/sp_famicon_undead.webp?v=3fb66881",
 "assets/icons/sp_famicon_warrior.webp?v=03a2a52f",
+"assets/icons/sp_food_baguette.webp?v=81055247",
+"assets/icons/sp_food_chilidog.webp?v=e45ef4b6",
+"assets/icons/sp_food_hotpot.webp?v=6356056b",
+"assets/icons/sp_food_naan.webp?v=36a5bcc4",
+"assets/icons/sp_food_pretzel.webp?v=d9ee7aee",
+"assets/icons/sp_food_ramen.webp?v=15e48ebb",
+"assets/icons/sp_food_redcurry.webp?v=32ea0a3d",
+"assets/icons/sp_food_taco.webp?v=846cfdf1",
 "assets/icons/sp_icon_dude_alien.webp?v=726a2303",
 "assets/icons/sp_icon_dude_bard.webp?v=628bc1b3",
 "assets/icons/sp_icon_dude_basketball.webp?v=076e6824",
@@ -525,6 +533,7 @@
 "assets/icons/sp_tr_team_jersey.webp?v=6fa4b3ac",
 "assets/icons/sp_tr_therapy.webp?v=08c023db",
 "assets/icons/sp_tr_weighted_vest.webp?v=a0f1e04d",
+"assets/icons/sp_ui_foodie_portrait.webp?v=0885f66f",
 "assets/icons/sp_ui_icon_trinket.webp?v=62756b67",
 "assets/icons/sp_ui_promoter_portrait.webp?v=93aeb8b1"
 ]
