@@ -91,6 +91,10 @@
   scores / Team view / Build effects; a trinket offer scores its best Dude (rows = binding it to each Dude), Take
   binds it there.
 
+- 2026-11-18 (10): trinket offers (drafted from 3, like relics) show only where they meet the drafted Dudes: one row
+  per Dude without a trinket, Family / Global relics folded into the row of each Dude they apply to; score = best
+  Dude. One trinket per Dude, no duplicates: a bound trinket leaves the offer search and other Dudes' pickers.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

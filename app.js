@@ -297,12 +297,14 @@ function overlap(x, build) {
   // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
   const self = new Map(), dudeRows = new Map(), famRows = new Map();
   const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
-  const offered = x.pool === "trinket";        // a trinket offer: each Dude's row = binding it to him
+  const offered = x.pool === "trinket";        // a trinket offer: each free Dude's row = binding it to him (one each)
   for (const s of newFx)
     for (const l of PAIR[s] || []) {
       const h = owner.get(l.o);
-      if (!h || (!offered && !pairOk(l, s, l.o))) continue;
+      if (!h || (!offered && !pairOk(l, s, l.o)) || (offered && h.t && draft.wield[h.t])) continue;
       if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
+      // a trinket offer only meets drafted Dudes: a Family / Global relic counts in the row of each Dude it applies to
+      else if (offered && !h.t) for (const d of team.filter((d) => !draft.wield[d.t] && appliesTo(itemOf(l.o), d))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
       else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
     }
   out.secs.push({ rows: scoreRows(self) }, { rows: scoreRows(dudeRows) });
@@ -431,7 +433,8 @@ function renderDraft() {
   // each Dude's trinket: the bound one (or the Stash icon, faded); tap to open the picker, tap a trinket to bind it
   const wslot = (t) => {
     const b = TRINKET[draft.wield[t]];
-    const pick = draft.wpick === t ? `<div class="rpicks">${trinketsSorted.map((x) => `<button class="rpick${draft.wield[t] === x.id ? " on" : ""}"
+    // no duplicates: a trinket bound to another Dude is not offered here
+    const pick = draft.wpick === t ? `<div class="rpicks">${trinketsSorted.filter((x) => !holderOf("trinket:" + x.id) || draft.wield[t] === x.id).map((x) => `<button class="rpick${draft.wield[t] === x.id ? " on" : ""}"
       data-wbind="${t}|${x.id}" title="${esc(x.name)}" aria-pressed="${draft.wield[t] === x.id}">${img(x.icon, x.name)}</button>`).join("")}</div>` : "";
     return `<div class="wield"><button class="rpick${b ? " on" : ""}" data-wpick="${t}" title="${esc(b ? b.name : "Trinket")}"
       aria-expanded="${draft.wpick === t}">${b ? img(b.icon, b.name) : img(H.pools.trinket.icon, "Trinket")}</button>${b
@@ -458,7 +461,8 @@ function renderDraft() {
 function pickResults(i, q) {
   q = q.trim().toLowerCase();
   if (!q) return "";
-  const hits = [...dudesSorted, ...relicsSorted, ...trinketsSorted].filter((x) => match(q, x.name)).slice(0, 8);
+  const free = trinketsSorted.filter((x) => !holderOf("trinket:" + x.id));   // a bound trinket can't be drafted again
+  const hits = [...dudesSorted, ...relicsSorted, ...free].filter((x) => match(q, x.name)).slice(0, 8);
   return hits.map((x) => itemRow(x, `data-pick="${i}|${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
 }
 
@@ -658,8 +662,8 @@ document.addEventListener("click", (e) => {
       if (key.startsWith("trinket:")) {
         // a taken trinket is bound to the Dude it fits best (rebind it in the build)
         const top = overlap(itemOf(key), draft.build).secs[1].rows[0];
-        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:"))?.slice(5);
-        if (to) bind(to, key.slice(8));
+        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:") && !draft.wield[k.slice(5)])?.slice(5);
+        if (to && !holderOf(key)) bind(to, key.slice(8));
       } else draft.build.push(key);
       draft.slots.fill(null);
     } else if (ds.unslot) draft.slots[+ds.unslot] = null;
