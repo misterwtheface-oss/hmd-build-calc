@@ -35,14 +35,15 @@ const unitItem = (u) => itemOf(u);
 const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On", boosts: "Boosts" };
 // channels an effect touches that link to another unit (shown as chips; the facet verb says how)
 const fxShown = (x) => x.fx.filter(([, c]) => CH[c]);
-// effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's}]
+// effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's,
+// give: this side provides the channel, so the other side (its consumer) receives it}]
 const PAIR = {};
 {
   const { keys, names, fac, p } = H.pairs;
   for (const [a, b, c, v, pf, cf] of p) {
     const give = `${FACET[fac[pf]]} ${names[v]}`, use = `${FACET[fac[cf]]} ${names[c]}`;
-    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use });
-    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give });
+    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use, give: true });
+    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false });
   }
 }
 // the effects of a unit: a Dude's ability with every relic of his pool (he can hold them all), or one relic
@@ -238,7 +239,7 @@ const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) 
 function overlap(x, build) {
   const items = build.map(itemOf);
   const dudes = items.filter((b) => b.t);
-  const out = { fam: [], links: [], ch: [], rows: [], score: 0, poolFams: [], poolRows: [], poolScore: 0 };
+  const out = { fam: [], links: [], secs: [], score: 0 };
   const famCount = (f) => dudes.filter((b) => b.fam.includes(f)).length;
   if (x.t) {
     for (const f of x.fam) if (f !== "global" && famCount(f)) out.fam.push([f, famCount(f)]);
@@ -251,51 +252,73 @@ function overlap(x, build) {
     const other = e.a === k ? e.b : e.b === k ? e.a : null;
     if (other && build.includes(other) && !out.links.includes(itemOf(other))) out.links.push(itemOf(other));
   }
-  // synergy: the offer's effects (a Dude: his ability and all his relics) paired with the build's, per Dude
+  // synergy pairs, each scored once under its receiver: the consumer (the side that scales with / reacts to the
+  // channel). A Family / Universal / Promoter relic can't receive, so it scores where it contributes (either side)
   const mine = unitOf(x);
   const team = [...new Set(dudes)];
-  // the build reaches its Dudes' relics (their units) and the relics of every Family it has a member of
-  const inBuild = new Set([...items.map(unitOf), ...buildFams(team).flatMap((f) => relicsOfFamilyPool(f).map(unitOf))]);
-  inBuild.delete(mine);
-  out.rows = holders(x.t ? effectsOfUnit(mine) : [k], inUnits(inBuild), team);
-  out.ch = [...new Set(out.rows.flatMap((r) => [...r.ch.keys()]))];
-  out.score = out.ch.reduce((s, c) => s + chWeight(c), 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
-  // first Dude of a Family: the Family relics he unlocks, each scored against the build plus himself
-  if (x.t) {
-    const reach = new Set([...inBuild, mine]);
-    out.poolFams = x.fam.filter((f) => f !== "global" && !famCount(f));
-    const pool = out.poolFams.flatMap((f) => relicsOfFamilyPool(f).map((r) => "relic:" + r.id));
-    out.poolRows = holders(pool, inUnits(reach), [...team, x]);
-    out.poolScore = pool.reduce((s, r) =>
-      s + [...new Set((PAIR[r] || []).filter((l) => reach.has(unitOf(itemOf(l.o)))).map((l) => l.ch))].reduce((a, c) => a + chWeight(c), 0), 0);
+  const fams = buildFams(team);
+  // the offer's effects (a Dude: his ability and all his relics); the build's, each under the row it scores in:
+  // its Dude (his ability and all his relics) or its Family (relics of a Family the build has a member of, or picked)
+  const newFx = x.t ? effectsOfUnit(mine) : [k];
+  const owner = new Map();
+  for (const d of team) if ("dude:" + d.t !== mine) for (const e of effectsOfUnit("dude:" + d.t)) owner.set(e, d);
+  for (const r of [...fams.flatMap(relicsOfFamilyPool), ...items.filter((b) => b.id && b.pool !== "dude")])
+    if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), FAM[r.fam]);
+  // sections: the offer (what it receives), each build Dude (what he receives from the offer), each Family the
+  // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
+  const self = new Map(), dudeRows = new Map(), famRows = new Map();
+  const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
+  for (const s of newFx)
+    for (const l of PAIR[s] || []) {
+      const h = owner.get(l.o);
+      if (!h) continue;
+      if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
+      else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
+    }
+  out.secs.push({ rows: scoreRows(self) }, { rows: scoreRows(dudeRows) });
+  for (const f of x.t ? x.fam.filter((f) => f !== "global" && !fams.includes(f)) : []) {
+    const rows = new Map();
+    for (const r of relicsOfFamilyPool(f))
+      for (const l of PAIR["relic:" + r.id] || []) {
+        const h = owner.get(l.o);
+        if (h && h !== FAM[f]) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label);
+      }
+    out.secs.push({ head: FAM[f], rows: scoreRows(rows) });
   }
+  out.secs.push({ rows: scoreRows(famRows) });
+  for (const sec of out.secs) sec.score = sec.rows.reduce((a, r) => a + r.score, 0);
+  out.score = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   return out;
 }
 
-// who holds what: pairs between the source effects and the target effects (ok(key)), grouped by Dude. A Dude counts
-// all his relics; a Family / universal / Promoter relic counts for every Dude of the team it applies to
+// pair rows: row key -> {x: its Dude / Family / offer, ch: channel -> {theirs: the row's effects, mine: the other
+// side's}, effect key -> facet labels}; a row scores the weight of each distinct channel it holds
 const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
-const inUnits = (units) => (k) => units.has(unitOf(itemOf(k)));
+const headKey = (h) => (h.t ? "dude:" + h.t : FAM[h.id] === h ? "family:" + h.id : keyOf(h));
+function putPair(rows, h, ch, own, ownLabel, other, otherLabel) {
+  const hk = headKey(h);
+  const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
+  const c = row.ch.get(ch) || row.ch.set(ch, { theirs: new Map(), mine: new Map() }).get(ch);
+  addTo(c.theirs, own, ownLabel);
+  addTo(c.mine, other, otherLabel);
+}
+const scoreRows = (rows) => [...rows.values()]
+  .map((r) => ({ ...r, score: [...r.ch.keys()].reduce((a, c) => a + chWeight(c), 0) }))
+  .sort((a, b) => b.score - a.score || byName(a.x, b.x));
+// Team view: pairs between the source effects and the target effects (ok(key)), grouped by Dude. A Dude counts
+// all his relics; a Family / universal / Promoter relic counts for every Dude of the team it applies to
 const appliesTo = (r, d) => r.fam === "global" || d.fam.includes(r.fam);
 function holders(src, ok, team) {
-  const rows = new Map();   // holder key -> {x, ch: channel -> {theirs, mine: effect key -> facet labels}}
+  const rows = new Map();
   for (const s of src)
     for (const l of PAIR[s] || []) {
       if (!ok(l.o)) continue;
       const t = itemOf(l.o);
       const tu = unitOf(t);
       const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => appliesTo(t, d));
-      for (const h of owners.length ? owners : [t]) {
-        const hk = keyOf(h);
-        const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
-        const c = row.ch.get(l.ch) || row.ch.set(l.ch, { theirs: new Map(), mine: new Map() }).get(l.ch);
-        addTo(c.theirs, l.o, l.olabel);
-        addTo(c.mine, s, l.label);
-      }
+      for (const h of owners.length ? owners : [t]) putPair(rows, h, l.ch, l.o, l.olabel, s, l.label);
     }
-  return [...rows.values()]
-    .map((r) => ({ ...r, score: [...r.ch.keys()].reduce((a, c) => a + chWeight(c), 0) }))
-    .sort((a, b) => b.score - a.score || byName(a.x, b.x));
+  return scoreRows(rows);
 }
 const num1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
 const iconBtn = (k) => { const b = itemOf(k); return `<button class="vi" data-open="${k}" title="${esc(b.name)}">${img(b.icon, b.name)}</button>`; };
@@ -305,11 +328,14 @@ function pairSide(m) {
   for (const [k, v] of m) addTo(by, [...v].join(" / "), k);
   return `<span class="side">${[...by].map(([lab, ks]) => `<span class="fx">${[...ks].map(iconBtn).join("")}<small>${esc(lab)}</small></span>`).join("")}</span>`;
 }
-// per Dude: his name and score, then one line per channel: his effects ↔ the offer's
-const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${keyOf(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
+// per row: its name and score, then one line per channel: its effects ↔ the other side's
+const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${headKey(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
     ${[...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
+// an offer's sections in order; a Family the offer brings in heads its own rows
+const secHtml = (sec) => (!sec.head ? holderRows(sec.rows) : !sec.rows.length ? "" : `<div class="hold"><button class="hhead" data-open="family:${sec.head.id}">${img(sec.head.icon, sec.head.name)}<span>${esc(sec.head.name)}</span><b>${num1(sec.score)}</b></button>
+    ${holderRows(sec.rows)}</div>`);
 
-function slotHtml(i, best, max, poolMax) {
+function slotHtml(i, best, max) {
   const key = draft.slots[i];
   if (!key)
     return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude or relic" autocomplete="off">
@@ -326,8 +352,7 @@ function slotHtml(i, best, max, poolMax) {
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span>${x.t ? "" : fnTag(x)}</button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>
-    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${holderRows(o.rows)}` : ""}
-    ${o.poolScore ? `<div class="ovl"><span>${o.poolFams.map(famIcon).join("")}</span>${bar(o.poolScore, poolMax)}<b>${num1(o.poolScore)}</b></div>${holderRows(o.poolRows)}` : ""}
+    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.map(secHtml).join("")}` : ""}
     <button class="take" data-take="${i}">Take</button></div>`;
 }
 
@@ -356,7 +381,7 @@ function renderDraft() {
   const ovs = team ? [] : draft.slots.map((k) => (k ? overlap(itemOf(k), draft.build) : null));
   const scores = ovs.map((o) => (o ? o.score : -1));
   const max = Math.max(0, ...scores);
-  const poolMax = Math.max(0, ...ovs.map((o) => (o ? o.poolScore : 0)));   // second bar: its own scale (A-magnitude-bars)
+
   const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
   const counts = {};
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
@@ -378,7 +403,7 @@ function renderDraft() {
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);
-  return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max, poolMax)).join("")}</div>`}
+  return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}
     <h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`

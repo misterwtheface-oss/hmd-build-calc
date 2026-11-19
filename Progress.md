@@ -54,7 +54,13 @@
   Self-Scaling). Eagle Amulet Self-Scaling, Explosive Arrow Area, Manager Offense Single, Dentist Support Protection.
   Cleared / prevented states no longer tagged as caused (Book of Shadows, Ground Wire, Mag Boots).
 
+- 2026-11-18 (3): Draft weighting by receiver (user). Each synergy pair scores once, under the side that receives it
+  (its consumer: Scales / On). Offer card: the drafted Dude (what he receives from the build's Dudes and Family
+  relics), each build Dude (what he receives from the offer), each Family the offer brings in (its relics vs the
+  build's Dudes and Families only, either side), each build Family (what its relics take from the offer). Families
+  can't receive, so they score where they contribute. One Overlap bar = all sections (new-Family score now included)
+  + 3 per shared Family member + 3 per name link. Team view unchanged.
+
 ## Open
-- [ ] NEXT SESSION (user 2026-11-18): redo the Draft weighting (offer scoring, app.js § draft; synergy edge score
-  in extract effect_tags.py / build_data.py).
+- [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
