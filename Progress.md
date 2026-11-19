@@ -56,4 +56,5 @@
 
 ## Open
 - [ ] NEXT SESSION (user 2026-11-18): redo the Draft weighting (offer scoring, app.js § draft; synergy edge score
-  in extract effect_tags.py / build_data.py).- [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
+  in extract effect_tags.py / build_data.py).
+- [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
