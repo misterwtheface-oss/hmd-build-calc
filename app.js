@@ -125,10 +125,13 @@ const poolIcon = (r) =>
 
 const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t}">${img(DUDE[t].icon, DUDE[t].name)}${esc(DUDE[t].name)}</button>` : "");
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
-// an effect on a linked channel opens it; one nothing else gives / uses (Toughness ...) is a plain grey chip, edges first
+// an effect on a linked channel opens it; one nothing else gives / uses (Toughness ...) is a plain grey chip.
+// Order: granting (Gives, Triggers), then receiving (Scales, On, Boosts), then no interaction
 const fxChip = (f) => (CH[f[1]] ? `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(f[1])}">${esc(fxLabel(f))}</button>`
   : `<span class="chiplink kw fx-none">${esc(fxLabel(f))}</span>`);
-const fxAll = (x) => [...fxShown(x), ...x.fx.filter(([, c]) => !CH[c])];
+const GRANTS = new Set(["gives", "emits"]);
+const fxSide = (f) => (!CH[f[1]] ? 2 : GRANTS.has(f[0]) ? 0 : 1);
+const fxAll = (x) => x.fx.map((f, i) => [f, i]).sort((a, b) => fxSide(a[0]) - fxSide(b[0]) || a[1] - b[1]).map(([f]) => f);
 const fxChips = (x) => fxAll(x).map(fxChip).join("");
 const fxLine = (x) => (x.fx.length ? `<div class="chipline">${fxChips(x)}</div>` : "");
 const roleBadge = (d) =>
