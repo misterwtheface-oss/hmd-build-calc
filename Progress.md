@@ -116,6 +116,10 @@
   Effect edges section bars each facet (Gives / Scales / Triggers / On / Boosts + channel) by how many of his
   ability + relics carry it; tap opens the channel.
 
+- 2026-11-19 (2): effects on a channel nothing else gives / uses (Toughness: 50 givers, no reader in code; only
+  take_damage, stat refresh and the inspector read toughness_realtime) now show as grey chips with no rail after the
+  linked ones (were hidden). Team view too.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

@@ -214,6 +214,7 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .empty { color: var(--olive); padding: 16px 4px; }
 .chiplink.fx-gives, .chiplink.fx-emits { border-left: 3px solid var(--teal); }
 .chiplink.fx-scales, .chiplink.fx-reacts, .chiplink.fx-boosts { border-left: 3px solid var(--mustard); }
+.chiplink.fx-none { color: #a5a2ad; border-color: var(--panel2); cursor: default; }
 .mini .fams { margin-left: auto; display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
 .mini .fams img { width: 18px; height: 18px; flex: 0 0 18px; }
 .ovl img { width: 20px; height: 20px; }

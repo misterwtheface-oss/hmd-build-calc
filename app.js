@@ -125,8 +125,12 @@ const poolIcon = (r) =>
 
 const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t}">${img(DUDE[t].icon, DUDE[t].name)}${esc(DUDE[t].name)}</button>` : "");
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
-const fxChip = (f) => `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(f[1])}">${esc(fxLabel(f))}</button>`;
-const fxLine = (x) => (fxShown(x).length ? `<div class="chipline">${fxShown(x).map(fxChip).join("")}</div>` : "");
+// an effect on a linked channel opens it; one nothing else gives / uses (Toughness ...) is a plain grey chip, edges first
+const fxChip = (f) => (CH[f[1]] ? `<button class="chiplink kw fx-${f[0]}" data-open="ch:${encodeURIComponent(f[1])}">${esc(fxLabel(f))}</button>`
+  : `<span class="chiplink kw fx-none">${esc(fxLabel(f))}</span>`);
+const fxAll = (x) => [...fxShown(x), ...x.fx.filter(([, c]) => !CH[c])];
+const fxChips = (x) => fxAll(x).map(fxChip).join("");
+const fxLine = (x) => (x.fx.length ? `<div class="chipline">${fxChips(x)}</div>` : "");
 const roleBadge = (d) =>
   FEATURES.roles ? d.roles.map((r) => `<span class="badge role-${r.replace(/ /g, "")}">${esc(r)}</span>`).join("") : "";
 const fnTag = (x, n) => (FEATURES.roles && x.fn ? `<span class="tag fn fn-${x.fn[0]}">${esc(fnText(x))}${n ? `<b>×${n}</b>` : ""}</span>` : "");
@@ -469,8 +473,8 @@ function teamHtml(d, team, counts) {
   const mine = activeOf(d, counts);
   const others = team.filter((o) => o !== d);
   const theirs = new Set(others.flatMap((o) => activeOf(o, counts)).filter((k) => !mine.includes(k)));
-  const fx = mine.filter((k) => fxShown(itemOf(k)).length)
-    .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxShown(itemOf(k)).map(fxChip).join("")}</span></div>`).join("");
+  const fx = mine.filter((k) => itemOf(k).fx.length)
+    .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxChips(itemOf(k))}</span></div>`).join("");
   return `<div class="tview">${fx}${holderRows(holders(mine, (k) => theirs.has(k), others))}</div>`;
 }
 
