@@ -188,7 +188,14 @@ const segText = (seg) => seg.map((s) => (s[0] === "v" ? (s[3] != null ? fmtVal(s
 function renderList() {
   const q = state.q.trim().toLowerCase();
   let rows = [];
-  if (state.tab === "draft") return void ($("#list").innerHTML = renderDraft());
+  if (state.tab === "draft") {
+    // keep each pane's own scroll across re-renders (rule A-no-scroll-reset)
+    const panes = (el) => (el.querySelectorAll ? [...el.querySelectorAll(".dpane")] : []);
+    const keep = panes($("#list")).map((p) => p.scrollTop);
+    $("#list").innerHTML = renderDraft();
+    panes($("#list")).forEach((p, i) => { p.scrollTop = keep[i] || 0; });
+    return;
+  }
   if (state.tab === "search") {
     const kind = (k) => !state.kind || state.kind === k;
     const ds = !kind("dude") ? [] : dudesSorted
@@ -497,11 +504,12 @@ function renderDraft() {
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => heldKeys(itemOf(dk))).map(itemOf)];
-  return `${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}
-    <h3>Build</h3>${tiles.length
+  // two panes (side by side on a wide or sideways screen, each scrolling on its own): offers, then the build
+  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}</div>
+    <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
-      : `<div class="empty">Take an offer to start a build</div>`}`;
+      : `<div class="empty">Take an offer to start a build</div>`}</div></div>`;
 }
 
 function pickResults(i, q) {

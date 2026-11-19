@@ -107,6 +107,10 @@
   yet (best fit first, highlighted); giving it binds it to him and clears the offers, so he drops out as a
   candidate for the next trinket / meal (tracked per kind).
 
+- 2026-11-18 (13): Draft landscape / wide layout: offers and build are two panes, side by side from 760 px wide;
+  on a sideways phone (landscape, height <= 540) the header is one slim row and each pane scrolls on its own (scroll
+  kept across taps). Team view: one column, Dude groups two across. Portrait unchanged.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
