@@ -212,7 +212,8 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .tag { font: 13px var(--narrow); padding: 1px 8px; border-radius: 999px; background: var(--sage); color: var(--cream); }
 .prose { color: var(--olive); margin: 6px 0; }
 .empty { color: var(--olive); padding: 16px 4px; }
-.chiplink.fx-gives, .chiplink.fx-emits { border-left: 3px solid var(--teal); }
+/* rail = the connector: granting effects connect out on the right, receiving ones take in on the left */
+.chiplink.fx-gives, .chiplink.fx-emits { border-right: 3px solid var(--teal); }
 .chiplink.fx-scales, .chiplink.fx-reacts, .chiplink.fx-boosts { border-left: 3px solid var(--mustard); }
 .chiplink.fx-none { color: #a5a2ad; border-color: var(--panel2); cursor: default; }
 .mini .fams { margin-left: auto; display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }

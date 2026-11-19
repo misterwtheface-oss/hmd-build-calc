@@ -118,7 +118,8 @@
 
 - 2026-11-19 (2): effects on a channel nothing else gives / uses (Toughness: 50 givers, no reader in code; only
   take_damage, stat refresh and the inspector read toughness_realtime) now show as grey chips with no rail after the
-  linked ones (were hidden). Team view too. Chip order: granting (Gives, Triggers), receiving (Scales, On, Boosts), then grey.
+  linked ones (were hidden). Team view too. Chip order: granting (Gives, Triggers), receiving (Scales, On, Boosts), then grey. Rail = connector: granting teal on the right,
+  receiving mustard on the left.
 
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
