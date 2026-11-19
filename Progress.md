@@ -65,6 +65,11 @@
   "received" = on_overheal_received_dude hook). Halftime Show and Frilled Shoulderpads convert their own heal's
   overflow (no heal hook in code), so their "On Healing" edges are gone.
 
+- 2026-11-18 (5): Direct Crit is its own channel. 13 reactors that name it (Vuvuzela, Ninja, Cutlass ...) now only
+  match Direct Crit sources: Crit Chance / Crit Exposure givers (normal attacks are Direct in code) and Golden Glove
+  (deal_damage direct = true). Six Shooter (deal_aoe_damage, never Direct), Intercom and Special Sauce's healing
+  crits stay plain Crit.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
