@@ -48,5 +48,12 @@
   Spell Book relic sprite on the crimson field (user pick; not the game's launcher icon). Install from Chrome / Edge
   menu; opens in its own window, works offline (sw.js).
 
+- 2026-11-18 (2): buff / heal receivers decoded per effect (extract receivers_by_effect.json,
+  heal_receivers_by_effect.json, function_manual.json): self-only buffs = Offense / Self-Scaling, self-only heals and
+  shields = Defense / Mitigation, anything reaching other Dude types = Support (user rule; own-type buffs stay
+  Self-Scaling). Eagle Amulet Self-Scaling, Explosive Arrow Area, Manager Offense Single, Dentist Support Protection.
+  Cleared / prevented states no longer tagged as caused (Book of Shadows, Ground Wire, Mag Boots).
+
 ## Open
-- [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
+- [ ] NEXT SESSION (user 2026-11-18): redo the Draft weighting (offer scoring, app.js § draft; synergy edge score
+  in extract effect_tags.py / build_data.py).- [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
