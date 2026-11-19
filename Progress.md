@@ -61,6 +61,10 @@
   can't receive, so they score where they contribute. One Overlap bar = all sections (new-Family score now included)
   + 3 per shared Family member + 3 per name link. Team view unchanged.
 
+- 2026-11-18 (4): Overhealing reacts to Healing only for anyone's overheal (Ring of Shielding "all", Laughing Gas
+  "received" = on_overheal_received_dude hook). Halftime Show and Frilled Shoulderpads convert their own heal's
+  overflow (no heal hook in code), so their "On Healing" edges are gone.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
