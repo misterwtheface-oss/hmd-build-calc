@@ -287,7 +287,9 @@ function overlap(x, build) {
   }
   out.secs.push({ rows: scoreRows(famRows) });
   for (const sec of out.secs) sec.score = sec.rows.reduce((a, r) => a + r.score, 0);
-  out.score = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
+  const total = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  out.score = Math.round(total * 10) / 10;
   return out;
 }
 
