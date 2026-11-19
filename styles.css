@@ -235,3 +235,8 @@ table.stats .num { text-align: right; font-variant-numeric: tabular-nums; }
 table.stats .chiplink img { width: 20px; height: 20px; }
 .wsec { margin: 4px 0 4px 14px; padding-left: 10px; border-left: 2px solid var(--line); }
 .wsec .fchip { font-variant-numeric: tabular-nums; }
+/* Give: a trinket / meal offer goes to one Dude (best fit first, highlighted) */
+.give { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin-top: 8px; }
+.give .take { margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.give .take img { width: 24px; height: 24px; }
+.give .take.alt { background: var(--panel2); }

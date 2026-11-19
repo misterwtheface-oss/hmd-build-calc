@@ -103,6 +103,10 @@
   the Global page; Draft: a Food slot under each Dude (meal + extra-stat chips), meal offers with an extra-stat
   picker, scored on free Dudes only.
 
+- 2026-11-18 (12): trinket / meal offers have no Take: one Give button per Dude in the build who doesn't hold one
+  yet (best fit first, highlighted); giving it binds it to him and clears the offers, so he drops out as a
+  candidate for the next trinket / meal (tracked per kind).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

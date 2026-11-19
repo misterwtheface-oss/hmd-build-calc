@@ -404,6 +404,17 @@ const secHtml = (sec) => (!sec.head ? holderRows(sec.rows) : !sec.rows.length ? 
 const statChips = (attr, who, cur) => `<div class="chips wsec">${H.foodstats.map((st) => `<button class="fchip" data-${attr}="${who}|${st.id}"
   aria-pressed="${cur === st.id}">${esc(st.name)} ${esc(segText(st.seg.filter((g) => g[0] === "v")))}</button>`).join("")}</div>`;
 
+// Take for a Dude / relic offer; a trinket / meal offer is given to one Dude instead: a button per Dude in the build
+// who doesn't hold one yet, the best fit first (highlighted)
+function giveOrTake(i, x, o) {
+  if (!(x.pool in HELD)) return `<button class="take" data-take="${i}">Take</button>`;
+  const free = [...new Set(draft.build.filter((k) => k.startsWith("dude:")))].map(itemOf).filter((d) => !HELD[x.pool].get(d.t));
+  const score = (d) => o.secs[1].rows.find((r) => r.x === d)?.score || 0;
+  const top = Math.max(0, ...free.map(score));
+  return free.length ? `<div class="give">${free.sort((a, b) => score(b) - score(a) || byName(a, b)).map((d) => `<button class="take${top && score(d) === top ? "" : " alt"}"
+    data-give="${i}|${d.t}">${img(d.icon, d.name)}<span>${esc(d.name)}</span></button>`).join("")}</div>` : "";
+}
+
 function slotHtml(i, best, max) {
   const key = draft.slots[i];
   if (!key)
@@ -422,7 +433,7 @@ function slotHtml(i, best, max) {
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>${x.pool === "food" ? statChips("fsec", i, draft.slotSec[i]) : ""}
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.map(secHtml).join("")}` : ""}
-    <button class="take" data-take="${i}">Take</button></div>`;
+    ${giveOrTake(i, x, o)}</div>`;
 }
 
 // a Dude's active effects in the build: his ability, his bound trinket, his picked relics, and every picked Family /
@@ -704,21 +715,20 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hpick],[data-hbind],[data-hsec],[data-fsec]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hpick],[data-hbind],[data-hsec],[data-fsec],[data-give]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
       const [i, key] = ds.pick.split("|");
       draft.slots[+i] = key;
-    } else if (ds.take) {
-      const key = draft.slots[+ds.take];
+    } else if (ds.take || ds.give) {
+      // Take: the offer joins the build; Give: a trinket / meal offer goes to the chosen Dude, who then drops out as
+      // a candidate for the next ones (one of each per Dude)
+      const [i, t] = (ds.give || ds.take).split("|");
+      const key = draft.slots[+i];
       const [kind, id] = key.split(":");
       if (HELD[kind]) {
-        // a taken trinket / meal goes to the free Dude it fits best (change it in the build)
-        const sec = draft.slotSec[+ds.take];
-        const top = overlap(itemOf(key), draft.build, sec).secs[1].rows[0];
-        const to = top ? top.x.t : draft.build.find((k) => k.startsWith("dude:") && !HELD[kind].get(k.slice(5)))?.slice(5);
-        if (to && !(HELD[kind].unique && boundTo(kind, id))) bind(kind, to, id, sec);
+        if (t && !HELD[kind].get(t) && !(HELD[kind].unique && boundTo(kind, id))) bind(kind, t, id, draft.slotSec[+i]);
       } else draft.build.push(key);
       draft.slots.fill(null);
       draft.slotSec.fill(null);
