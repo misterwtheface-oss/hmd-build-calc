@@ -199,6 +199,19 @@ def main():
         if l["ch"] in kept and l.get("cvia") and l["cvia"] not in kept:
             cvia_n.setdefault(l["cvia"], Counter())[l["ch"]] += 1
     cvia = {v: n.most_common(1)[0][0] for v, n in sorted(cvia_n.items())}
+    # an effect's facet with no link of its own (Glass Cannon's self Vulnerability) is marked dead: fx[3] = 0, grey chip
+    live = {}
+    for l in syn["links"]:
+        if l["ch"] in kept:
+            live.setdefault(l["from"], set()).add((l["pf"], l["via"]))
+            # through a derived facet the shown one is the stat it stands for (gives Crit Damage / Lifesteal)
+            live.setdefault(l["to"], set()).add(("gives", l["cvia"]) if l.get("cvia") else (l["cf"], l["ch"]))
+    for kind, items, key in (("dude", dudes, "t"), ("relic", relics, "id"), ("trinket", trinkets, "id"),
+                             ("food", food, "id"), ("foodstat", foodstats, "id")):
+        for x in items:
+            for f in x["fx"]:
+                if (f[0], f[1]) not in live.get(kind + ":" + x[key], ()):
+                    f.append(0)
     keys, names, fac = [], [], ["gives", "scales", "emits", "reacts", "boosts"]
     ki, ni = {}, {}
 

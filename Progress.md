@@ -134,6 +134,12 @@
   crit_chance roll in deal_damage / deal_aoe_damage / deal_attack_damage). Every Crit Damage giver links to the Crit
   Chance givers it reaches (+473 effect links); its chip receives (left rail) and opens Crit Chance (data.js cvia).
 
+- 2026-11-19 (6): Damage Dealt channel (user): the 9 effects that scale with damage actually dealt (were DPS) and
+  Lifesteal givers, fed by Attack Power, Attack Speed and Vulnerability on enemies (take_damage multiplies by
+  1 + vulnerability before on_deal_damage / lifesteal; any Dude hitting the target benefits). Glass Cannon's self
+  Vulnerability links nothing (user: no in-app enemy applies it to Dudes). Chips are now grey per effect when that
+  effect has no link through the facet (fx[3] = 0), not only per channel: self Cleave / Run Speed nothing of his uses.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

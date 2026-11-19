@@ -42,6 +42,8 @@ const CH = Object.fromEntries(H.chans.map((c) => [c.id, c]));
 // the channel page an effect's channel links through: itself, the event its stat causes (Deflection -> Deflect), or
 // the channel its value comes from (Crit Damage <- Crit Chance: that chip receives)
 const chOf = (c) => (CH[c] ? c : H.via[c] || H.cvia[c]);
+// a facet links when its channel does and this effect has a link through it (fx[3] = 0: none, e.g. a self debuff)
+const fxLive = (f) => f[3] !== 0 && chOf(f[1]);
 const chWeight = (c) => CH[c]?.r || 0;
 const SYN = {};
 for (const [a, b, score, chs] of H.syn) {
@@ -51,7 +53,7 @@ for (const [a, b, score, chs] of H.syn) {
 const unitItem = (u) => itemOf(u);
 const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On", boosts: "Boosts" };
 // channels an effect touches that link to another unit (shown as chips; the facet verb says how)
-const fxShown = (x) => x.fx.filter(([, c]) => chOf(c));
+const fxShown = (x) => x.fx.filter(fxLive);
 // effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's,
 // give: this side provides the channel, so the other side (its consumer) receives it; wield: a trinket link that
 // holds only when the trinket is bound to that Dude}]
@@ -130,11 +132,11 @@ const dudeChip = (t) => (DUDE[t] ? `<button class="chiplink" data-open="dude:${t
 const famChip = (f) => (FAM[f] ? `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)}</button>` : "");
 // an effect on a linked channel opens it; one nothing else gives / uses (Toughness ...) is a plain grey chip.
 // Order: granting (Gives, Triggers), then receiving (Scales, On, Boosts), then no interaction
-const fxChip = (f) => (chOf(f[1]) ? `<button class="chiplink kw fx-${receives(f) ? "reacts" : f[0]}" data-open="ch:${encodeURIComponent(chOf(f[1]))}">${esc(fxLabel(f))}</button>`
+const fxChip = (f) => (fxLive(f) ? `<button class="chiplink kw fx-${receives(f) ? "reacts" : f[0]}" data-open="ch:${encodeURIComponent(chOf(f[1]))}">${esc(fxLabel(f))}</button>`
   : `<span class="chiplink kw fx-none">${esc(fxLabel(f))}</span>`);
 const GRANTS = new Set(["gives", "emits"]);
 const receives = (f) => !GRANTS.has(f[0]) || (!CH[f[1]] && !H.via[f[1]] && H.cvia[f[1]]);
-const fxSide = (f) => (!chOf(f[1]) ? 2 : receives(f) ? 1 : 0);
+const fxSide = (f) => (!fxLive(f) ? 2 : receives(f) ? 1 : 0);
 const fxAll = (x) => x.fx.map((f, i) => [f, i]).sort((a, b) => fxSide(a[0]) - fxSide(b[0]) || a[1] - b[1]).map(([f]) => f);
 const fxChips = (x) => fxAll(x).map(fxChip).join("");
 const fxLine = (x) => (x.fx.length ? `<div class="chipline">${fxChips(x)}</div>` : "");
