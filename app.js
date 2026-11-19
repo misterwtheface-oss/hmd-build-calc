@@ -395,7 +395,7 @@ function renderDraft() {
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
   const tile = (k) =>
     `<div class="btile">${mini(itemOf(k), counts[k] > 1 ? "×" + counts[k] : "")}<button class="x" data-unbuild="${k}" aria-label="Remove">×</button></div>`;
-  // each Dude, then each Family the build has a member of, with all their relics as icons: faded until picked,
+  // each Dude, then each Family the build has a member of, then Global, with all their relics as icons: faded until picked,
   // a picked relic joins the build (and the Build effects); every other drafted relic after as a tile
   const keys = Object.keys(counts);
   const dudeKeys = keys.filter((k) => k.startsWith("dude:"));
@@ -406,8 +406,10 @@ function renderDraft() {
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)))}${team
       ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
     ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
+    // last: Global, its Universal then Promoter relics, picked as they're collected
+    ...(keys.length ? [`<div class="bgroup"><div class="fhead">${famIcon("global")}<span>${esc(FAM.global.name)}</span></div>${SOURCES.map((p) => relicPicks(relicsOfSource(p))).join("")}</div>`] : []),
   ];
-  const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : fams.includes(x.fam); };
+  const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = draft.build.map(itemOf);

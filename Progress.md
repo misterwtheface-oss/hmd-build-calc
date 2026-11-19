@@ -74,6 +74,10 @@
   (24, init_relics, always in the pool) and Promoter (8, init_promoter_relics, won in the Promoter Dude's underground
   fights). Global page lists them in two sections; Draft rows show Universal / Promoter instead of Global.
 
+- 2026-11-18 (7): Draft build ends with a Global group (Universal row, then Promoter row) to pick relics as they're
+  collected. Taunt feeds Damage Taken only for one Dude's damage taken (Chestplate), not all-Dudes effects (Sewing
+  Kit); "not / non- Fatal Damage" is an exclusion, not a trigger (Sewing Kit, Sideline Report).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
