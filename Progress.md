@@ -111,6 +111,11 @@
   on a sideways phone (landscape, height <= 540) the header is one slim row and each pane scrolls on its own (scroll
   kept across taps). Team view: one column, Dude groups two across. Portrait unchanged.
 
+- 2026-11-19: every magnitude bar shows its n (Family cards, Common / Build effects; Overlap already did).
+  Dude page: Function chips carry ×n (how many of his ability + relics have that Function · Focus) and a new
+  Effect edges section bars each facet (Gives / Scales / Triggers / On / Boosts + channel) by how many of his
+  ability + relics carry it; tap opens the channel.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
