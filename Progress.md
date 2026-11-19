@@ -126,6 +126,10 @@
   Crit. The 44 "Scales DPS" effects (Cool Shades = 10 x dps_realtime) now link to every Attack Power / Attack Speed
   giver they reach: +3722 effect links (8422 -> 12144).
 
+- 2026-11-19 (4): fix: stats that link through the event they cause (Deflection -> Deflect, Evasion -> Evade, Block
+  Chance -> Block, Regeneration, Healing Received, Miss Chance, Crit Exposure, Multistrike; data.js `via`) showed as
+  grey chips though their links existed; now railed, open the event's page and count in Effect edges / bars.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
