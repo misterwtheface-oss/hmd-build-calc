@@ -78,6 +78,10 @@
   collected. Taunt feeds Damage Taken only for one Dude's damage taken (Chestplate), not all-Dudes effects (Sewing
   Kit); "not / non- Fatal Damage" is an exclusion, not a trigger (Sewing Kit, Sideline Report).
 
+- 2026-11-18 (8): a state recovered from, or a pointer back to the trigger ("where he was Thrown from"), is not
+  caused: Snapback Sneakers = On Thrown only (hooks on_thrown_dude / on_thrown_end_dude); Zombie Dude loses
+  On Knock Out (his faster recovery is not a trigger).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
