@@ -270,3 +270,7 @@ table.stats .chiplink img { width: 20px; height: 20px; }
 .boss .bwk { font: 14px/1.2 var(--narrow); color: var(--olive); font-variant-numeric: tabular-nums; }
 .boss .bpart { display: inline-flex; align-items: center; gap: 2px; font: 14px var(--narrow); color: var(--cream); font-variant-numeric: tabular-nums; }
 .hero + table.stats { margin-bottom: 4px; }
+/* Draft offer: a Family the offer brings in gets its own bar; the Total (what ranks the offers) closes the slot */
+.ovl.nfam { margin-top: 8px; }
+.ovl.nfam .chiplink { font: 14px var(--narrow); }
+.ovl.total { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--cream); }

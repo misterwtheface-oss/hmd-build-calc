@@ -151,6 +151,10 @@
 - 2026-11-19 (9): Draft build: the trinket / meal rows under each Dude are gone; a trinket or meal given from an
   offer shows lit at the end of that Dude's relic icons (tooltip: name + the meal's extra stat), tap it to take it back.
 
+- 2026-11-19 (10): Draft offers: a new Family's gain is shown apart. Overlap = the offer's own fit; each Family a Dude
+  offer brings in gets its own bar (its relics' pairs listed under it); Total = both, still what picks the
+  highlighted (best) offer. Each bar kind scales to its own largest among the offers.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

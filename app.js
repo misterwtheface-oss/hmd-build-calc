@@ -395,6 +395,10 @@ function overlap(x, build, sec) {
   // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
   const total = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   out.score = Math.round(total * 10) / 10;
+  // shown apart: what each Family the offer brings in adds (its relics), and the offer's own fit (the rest);
+  // the recommendation still ranks by the combined score
+  out.newFams = out.secs.filter((sec) => sec.head).map((sec) => ({ f: sec.head, score: Math.round(sec.score * 10) / 10, rows: sec.rows }));
+  out.own = Math.round((total - out.newFams.reduce((a, n) => a + n.score, 0)) * 10) / 10;
   return out;
 }
 
@@ -438,9 +442,8 @@ function pairSide(m) {
 // per row: its name and score, then one line per channel: its effects ↔ the other side's
 const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${headKey(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
     ${[...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
-// an offer's sections in order; a Family the offer brings in heads its own rows
-const secHtml = (sec) => (!sec.head ? holderRows(sec.rows) : !sec.rows.length ? "" : `<div class="hold"><button class="hhead" data-open="family:${sec.head.id}">${img(sec.head.icon, sec.head.name)}<span>${esc(sec.head.name)}</span><b>${num1(sec.score)}</b></button>
-    ${holderRows(sec.rows)}</div>`);
+// an offer's sections in order (a Family the offer brings in is shown apart, under its own bar)
+const secHtml = (sec) => holderRows(sec.rows);
 
 // a meal's extra stat: one chip per stat (its value as the extra stat), the chosen one pressed
 const statChips = (attr, who, cur) => `<div class="chips wsec">${H.foodstats.map((st) => `<button class="fchip" data-${attr}="${who}|${st.id}"
@@ -457,7 +460,7 @@ function giveOrTake(i, x, o) {
     data-give="${i}|${d.t}">${img(d.icon, d.name)}<span>${esc(d.name)}</span></button>`).join("")}</div>` : "";
 }
 
-function slotHtml(i, best, max) {
+function slotHtml(i, best, maxes) {
   const key = draft.slots[i];
   if (!key)
     return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude, relic, trinket or food" autocomplete="off">
@@ -474,7 +477,9 @@ function slotHtml(i, best, max) {
     <div class="shead"><button class="rhead" data-open="${key}">${img(x.icon, x.name)}<span>${esc(x.name)}</span>${x.t ? "" : fnTag(x)}</button>
       <span class="slabel">${label}</span><button class="x" data-unslot="${i}" aria-label="Clear">×</button></div>
     <div class="rdesc">${text}</div>${x.pool === "food" ? statChips("fsec", i, draft.slotSec[i]) : ""}
-    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.score, max)}<b>${num1(o.score)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.map(secHtml).join("")}` : ""}
+    ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.own, maxes.own)}<b>${num1(o.own)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.filter((sec) => !sec.head).map(secHtml).join("")}
+      ${o.newFams.map((n) => `<div class="ovl nfam"><button class="chiplink" data-open="family:${n.f.id}">${famIcon(n.f.id)}${esc(n.f.name)}</button>${bar(n.score, maxes.fam)}<b>${num1(n.score)}</b></div>${holderRows(n.rows)}`).join("")}
+      ${o.newFams.length ? `<div class="ovl total"><span>Total</span>${bar(o.score, maxes.total)}<b>${num1(o.score)}</b></div>` : ""}` : ""}
     ${giveOrTake(i, x, o)}</div>`;
 }
 
@@ -502,7 +507,10 @@ function renderDraft() {
   const team = draft.view === "team";
   const ovs = team ? [] : draft.slots.map((k, i) => (k ? overlap(itemOf(k), draft.build, draft.slotSec[i]) : null));
   const scores = ovs.map((o) => (o ? o.score : -1));
+  // one scale per bar kind (own fit, a new Family's gain, the total), each its largest among the offers
   const max = Math.max(0, ...scores);
+  const maxes = { own: Math.max(0, ...ovs.map((o) => (o ? o.own : 0))),
+    fam: Math.max(0, ...ovs.flatMap((o) => (o ? o.newFams.map((n) => n.score) : []))), total: max };
 
   const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
   const counts = {};
@@ -535,7 +543,7 @@ function renderDraft() {
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => heldKeys(itemOf(dk))).map(itemOf)];
   // two panes (side by side on a wide or sideways screen, each scrolling on its own): offers, then the build
-  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, max)).join("")}</div>`}</div>
+  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
