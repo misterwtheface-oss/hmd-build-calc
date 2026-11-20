@@ -85,6 +85,8 @@ tryRender("meals", () => VIEWS.meals("all"));
 tryRender("foodstat", () => VIEWS.foodstat(H.foodstats[0].id));
 for (const f of H.families) tryRender(`family ${f.id}`, () => VIEWS.family(f.id));
 for (const c of H.chans) tryRender(`ch ${c.id}`, () => VIEWS.ch(c.id));
+for (const e of H.enemies) tryRender(`enemy ${e.id}`, () => VIEWS.enemy(e.id));
+for (const t of H.traits) tryRender(`trait ${t.id}`, () => VIEWS.trait(t.id));
 
 if (problems.length) {
   console.log(problems.slice(0, 40).join("\n"));

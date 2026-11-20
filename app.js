@@ -22,6 +22,10 @@ const dudesSorted = H.dudes.filter((d) => d.name).sort(byName);
 const relicsSorted = H.relics.slice().sort(byName);
 const trinketsSorted = H.trinkets.slice().sort(byName);
 const foodSorted = H.food.slice().sort(byName);
+// Enemies (AnimalType): what the fights are made of; stats arrive in the game's own format
+const ENEMY = Object.fromEntries(H.enemies.map((e) => [e.id, e]));
+const TRAIT = Object.fromEntries(H.traits.map((t) => [t.id, t]));
+const enemiesSorted = H.enemies.slice().sort((a, b) => a.from - b.from || byName(a, b));
 const relicsOfDude = (t) => relicsSorted.filter((r) => r.dude === t);
 const relicsOfFamilyPool = (f) => relicsSorted.filter((r) => r.pool !== "dude" && r.fam === f);
 const membersOf = (f) => dudesSorted.filter((d) => d.fam.includes(f));
@@ -176,6 +180,7 @@ const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</di
 const TABS = [
   { id: "families", name: "Families" },
   { id: "search", name: "Search" },
+  { id: "enemies", name: "Enemies" },
   ...(FEATURES.synergy ? [{ id: "synergy", name: "Synergies" }] : []),
   ...(FEATURES.draft ? [{ id: "draft", name: "Draft" }] : []),
 ];
@@ -232,6 +237,11 @@ function renderList() {
       .filter((r) => match(q, r.name, segText(r.seg), poolLabel(r)));
     const held = (k, xs) => (!kind(k) || (state.fam && state.kind !== k) ? [] : xs.filter((t) => match(q, t.name, segText(t.seg), poolLabel(t))));
     rows = [...ds, ...rs, ...held("trinket", trinketsSorted), ...held("food", foodSorted)].map((x) => itemRow(x));
+  } else if (state.tab === "enemies") {
+    rows = enemiesSorted
+      .filter((e) => match(q, e.name, ...e.traits.map((t) => TRAIT[t]?.name)))
+      .map((e) => `<button class="row" data-open="enemy:${e.id}">${img(e.icon, e.name, "ic")}<span class="main"><span class="name">${esc(e.name)}</span>
+        <span class="sub">${esc(enemyWhen(e))}</span></span><span class="tail tr">${e.traits.map((t) => img(TRAIT[t]?.icon, TRAIT[t]?.name, "ti")).join("")}</span></button>`);
   } else if (state.tab === "families") {
     const cards = H.families
       .filter((f) => match(q, f.name, f.desc, ...membersOf(f.id).map((d) => d.name)))
@@ -687,13 +697,45 @@ function mealsView() {
     ${section("Meals", relicCards(foodSorted))}`;
 }
 
-const VIEWS = { dude: dudeView, relic: relicView, trinket: trinketView, stash: stashView, food: foodView, meals: mealsView,
+// an Enemy: when it shows up, its stats and traits, and the boss fights that field it
+const tierText = (t) => (t.length === 3 ? "" : "Tier " + (t.length === 1 ? t[0] : t[0] + "–" + t[t.length - 1]));
+const enemyWhen = (e) => [e.from > 1 ? "From round " + e.from : "From the start", e.to ? "until round " + e.to : "", tierText(e.tiers)].filter(Boolean).join(" · ");
+const enemyChip = (id) => (ENEMY[id] ? `<button class="chiplink" data-open="enemy:${id}">${img(ENEMY[id].icon, ENEMY[id].name)}${esc(ENEMY[id].name)}</button>` : esc(id));
+const traitCard = (id) => {
+  const t = TRAIT[id];
+  return t ? `<div class="rcard"><button class="rhead" data-open="trait:${id}">${img(t.icon, t.name)}<span>${esc(t.name)}</span></button>
+    <div class="rdesc">${renderSegs(t.seg)}</div></div>` : "";
+};
+function enemyView(id) {
+  const e = ENEMY[id];
+  if (!e) return null;
+  const when = [e.from > 1 ? "From round " + e.from : "From the start", e.fromc !== e.from ? "Challenge: round " + e.fromc : "",
+    e.to ? "Last round " + e.to : "", tierText(e.tiers), e.fly ? "Flying" : ""].filter(Boolean);
+  const stats = e.stats.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(v)}</td></tr>`).join("");
+  const bosses = e.bosses.map(([wk, tiers, list]) => `<div class="boss"><span class="bwk">Round ${wk}${tierText(tiers) ? "<br>" + tierText(tiers) : ""}</span>
+    <span class="bparts">${list.map(([t, n]) => `<span class="bpart">${n ? n + "×" : ""}${enemyChip(t)}</span>`).join("")}</span></div>`).join("");
+  return `<div class="hero">${img(e.icon, e.name)}<div><h2>${esc(e.name)}</h2><div class="meta">${when.map((w) => `<span class="tag">${esc(w)}</span>`).join("")}</div></div></div>
+    <table class="stats">${stats}</table>
+    ${section("Traits", e.traits.length ? `<div class="rcards">${e.traits.map(traitCard).join("")}</div>` : "")}
+    ${section("Boss fights", bosses)}`;
+}
+// a Trait: its effect and every enemy that has it
+function traitView(id) {
+  const t = TRAIT[id];
+  if (!t) return null;
+  const who = enemiesSorted.filter((e) => e.traits.includes(id));
+  return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2></div></div>
+    <div class="desc">${renderSegs(t.seg)}</div>
+    ${section("Enemies", grid(who.map((e) => `<button class="mini" data-open="enemy:${e.id}">${img(e.icon, e.name)}<span>${esc(e.name)}<small>${esc(enemyWhen(e))}</small></span></button>`)))}`;
+}
+
+const VIEWS = { enemy: enemyView, trait: traitView, dude: dudeView, relic: relicView, trinket: trinketView, stash: stashView, food: foodView, meals: mealsView,
   foodstat: () => mealsView(), family: familyView, ch: chView };
 
 /* ---------- routing: #tab or #kind:id (overlay) ---------- */
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  const m = h.match(/^(dude|relic|trinket|stash|food|meals|foodstat|family|ch):(.+)$/);
+  const m = h.match(/^(dude|relic|trinket|stash|food|meals|foodstat|family|ch|enemy|trait):(.+)$/);
   if (m) {
     const html = VIEWS[m[1]](m[2]);
     if (html) {

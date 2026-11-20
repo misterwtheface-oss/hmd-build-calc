@@ -140,6 +140,14 @@
   Vulnerability links nothing (user: no in-app enemy applies it to Dudes). Chips are now grey per effect when that
   effect has no link through the facet (fx[3] = 0), not only per channel: self Cleave / Run Speed nothing of his uses.
 
+- 2026-11-19 (7): Enemies tab (the game's name; code type AnimalType): all 69 enemies sorted by the round they can
+  first appear (enemies_get_available_for_round: start <= round), with tiers, last round, flying. Enemy page: stats
+  in the game's own format (stat_value_to_text: HP with commas, DPS / Attack Speed 1 decimal, Run Speed Ft/Second,
+  others %), real values = info x Dude baseline for relative stats, else info or the baseline (stats_init); traits
+  with their numbers (47, TraitInfo); boss fights that field it. Trait page lists every enemy with it. Icons from the
+  structs' asset references. Full-game enemies are Tier 3 only (tiers [3], gs_constArg43).
+- 2026-11-19 (8): fix: Oregano "stacking up to" = 30 (the relic's own variables block; was 1 from a buff inside it).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
