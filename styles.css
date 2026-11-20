@@ -186,8 +186,6 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .rpick { padding: 3px; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; opacity: 0.35; }
 .rpick img { width: 36px; height: 36px; display: block; }
 .rpick.on { opacity: 1; border-color: var(--mustard); background: var(--panel2); }
-.wield { display: flex; align-items: center; gap: 8px; margin: 4px 0 4px 14px; padding-left: 10px; border-left: 2px solid var(--line); }
-.wield .wname { padding: 0; border: 0; background: none; cursor: pointer; font: 15px var(--narrow); color: var(--cream); }
 .fhead { display: flex; align-items: center; gap: 8px; font: 16px var(--narrow); color: var(--cream); }
 .fhead img { width: 28px; height: 28px; }
 .dview { margin: 4px 0 2px; }

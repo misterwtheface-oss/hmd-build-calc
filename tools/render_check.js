@@ -54,7 +54,6 @@ for (const build of [[], ["dude:basketball", "dude:basketball", "relic:r_jump_sh
   draft.build.splice(0, draft.build.length, ...build);
   draft.wield = build.length ? { basketball: H.trinkets[0].id, coach: H.trinkets[1].id } : {};
   draft.food = build.length ? { basketball: { id: H.food[0].id, sec: H.foodstats[3].id }, coach: { id: H.food[1].id, sec: null } } : {};
-  draft.hpick = build.length ? "trinket|coach" : null;   // one held-item picker open
   draft.slotSec = [H.foodstats[0].id, null, H.foodstats[5].id];   // offered meals: one with an extra stat chosen
   for (let i = 0; i < all.length; i += 3) {
     draft.slots.splice(0, 3, all[i] || null, all[i + 1] || null, all[i + 2] || null);

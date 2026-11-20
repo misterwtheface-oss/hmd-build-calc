@@ -303,11 +303,10 @@ const draft = (() => {
     food: Object.fromEntries(Object.entries(d?.food || {}).filter(([t, v]) => DUDE[t] && FOOD[v?.id])
       .map(([t, v]) => [t, { id: v.id, sec: FOODSTAT[v.sec] ? v.sec : null }])),
     slotSec: Array.from({ length: SLOTS }, (_, i) => (FOODSTAT[d?.slotSec?.[i]] ? d.slotSec[i] : null)),
-    hpick: null,   // "kind|dude type" whose held-item picker is open
   };
 })();
 const saveDraft = () => {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, hpick: null })); } catch (e) { /* storage off */ }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage off */ }
 };
 
 // held items: what a Dude Type holds for the run, one of each kind. A trinket is never on two Dudes; a meal can be
@@ -515,22 +514,17 @@ function renderDraft() {
   const keys = Object.keys(counts);
   const dudeKeys = keys.filter((k) => k.startsWith("dude:"));
   const fams = buildFams(dudeKeys.map(itemOf));
-  const relicPicks = (rs) => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
-    aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}</div>`;
-  // each Dude's held items (trinket, meal): the held one (or the kind's icon, faded); tap to open the picker, tap an
-  // item to give it to him, tap it again to take it back. A meal also shows its extra stat
-  const heldSlot = (t, kind) => {
-    const cur = HELD[kind].get(t), b = cur && itemOf(kind + ":" + cur), on = draft.hpick === kind + "|" + t;
-    const opts = HELD[kind].items().filter((x) => !HELD[kind].unique || !boundTo(kind, x.id) || cur === x.id);   // no duplicates
-    const pick = on ? `<div class="rpicks">${opts.map((x) => `<button class="rpick${cur === x.id ? " on" : ""}" data-hbind="${kind}|${t}|${x.id}"
-      title="${esc(x.name)}" aria-pressed="${cur === x.id}">${img(x.icon, x.name)}</button>`).join("")}</div>` : "";
-    return `<div class="wield"><button class="rpick${b ? " on" : ""}" data-hpick="${kind}|${t}" title="${esc(b ? b.name : H.pools[kind].name)}"
-      aria-expanded="${on}">${b ? img(b.icon, b.name) : img(H.pools[kind].icon, H.pools[kind].name)}</button>${b
-      ? `<button class="wname" data-open="${kind}:${b.id}">${esc(b.name)}</button>` : ""}</div>${pick}${kind === "food" && b ? statChips("hsec", t, draft.food[t].sec) : ""}`;
-  };
-  const wslot = (t) => Object.keys(HELD).map((kind) => heldSlot(t, kind)).join("");
+  const relicPicks = (rs, extra = "") => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
+    aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}${extra}</div>`;
+  // a Dude's held items (trinket, meal given from an offer) sit lit after his relics; tap one to take it back
+  const heldPicks = (t) => Object.keys(HELD).map((kind) => {
+    const b = HELD[kind].get(t) && itemOf(kind + ":" + HELD[kind].get(t));
+    const sec = kind === "food" && b && draft.food[t].sec ? FOODSTAT[draft.food[t].sec] : null;
+    const title = b ? b.name + (sec ? " + " + statVal(sec) + " " + sec.name : "") : "";
+    return b ? `<button class="rpick on" data-hbind="${kind}|${t}|${b.id}" title="${esc(title)}" aria-pressed="true">${img(b.icon, b.name)}</button>` : "";
+  }).join("");
   const groups = [
-    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${wslot(dk.slice(5))}${relicPicks(relicsOfDude(dk.slice(5)))}${team
+    ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)), heldPicks(dk.slice(5)))}${team
       ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
     ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
     // last: Global, its Universal then Promoter relics, picked as they're collected
@@ -794,7 +788,7 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hpick],[data-hbind],[data-hsec],[data-fsec],[data-give]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hbind],[data-fsec],[data-give]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) {
@@ -823,15 +817,9 @@ document.addEventListener("click", (e) => {
       draft.wield = {};
       draft.food = {};
     }
-    else if (ds.hpick) draft.hpick = draft.hpick === ds.hpick ? null : ds.hpick;
     else if (ds.hbind) {
       const [kind, t, id] = ds.hbind.split("|");
       if (HELD[kind].get(t) === id) unbind(kind, t);
-      else bind(kind, t, id);
-      draft.hpick = null;
-    } else if (ds.hsec) {
-      const [t, st] = ds.hsec.split("|");
-      if (draft.food[t]) draft.food[t].sec = draft.food[t].sec === st ? null : st;
     } else if (ds.fsec) {
       const [i, st] = ds.fsec.split("|");
       draft.slotSec[+i] = draft.slotSec[+i] === st ? null : st;

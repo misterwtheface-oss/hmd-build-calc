@@ -148,6 +148,9 @@
   structs' asset references. Full-game enemies are Tier 3 only (tiers [3], gs_constArg43).
 - 2026-11-19 (8): fix: Oregano "stacking up to" = 30 (the relic's own variables block; was 1 from a buff inside it).
 
+- 2026-11-19 (9): Draft build: the trinket / meal rows under each Dude are gone; a trinket or meal given from an
+  offer shows lit at the end of that Dude's relic icons (tooltip: name + the meal's extra stat), tap it to take it back.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
