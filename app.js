@@ -374,8 +374,9 @@ function overlap(x, build, sec) {
       const h = owner.get(l.o);
       if (!h || (!offered && !pairOk(l, s, l.o)) || (h.t && taken(h.t))) continue;
       if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
-      // a trinket offer only meets drafted Dudes: a Family / Global relic counts in the row of each Dude it applies to
-      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t) && appliesTo(itemOf(l.o), d))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
+      // a trinket offer only meets drafted Dudes: a Family / Global relic reaches every Dude ("All Dudes gain",
+      // "When a Dude ..."; its Family only decides who can be offered it), so it counts in each free Dude's row
+      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
       else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
     }
   out.secs.push({ rows: scoreRows(self) }, { rows: scoreRows(dudeRows) });
@@ -418,7 +419,6 @@ const scoreRows = (rows) => [...rows.values()]
   .sort((a, b) => b.score - a.score || byName(a.x, b.x));
 // Team view: pairs between the source effects and the target effects (ok(key)), one row per owner: a Dude (his
 // ability and relics) or the group of a Family / Universal / Promoter relic
-const appliesTo = (r, d) => r.fam === "global" || d.fam.includes(r.fam);
 function holders(src, ok) {
   const rows = new Map();
   for (const s of src)

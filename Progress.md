@@ -169,6 +169,10 @@
   Dudes and to each group (one row per Family / source); under each Family and Global: its picked relics and their
   edges to the Dudes and other groups (as the offers' Family rows already did).
 
+- 2026-11-22 (4): fix: a Family relic reaches every Dude (its texts: "All Dudes gain", "When a Dude ..."); its Family only
+  decides who can be offered it. Trinket / meal offers: a Family relic's edges now count in every free Dude's row, not
+  only its members' (Crazy Straw <-> False Fangs on every Dude, was Lich Dude only).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
