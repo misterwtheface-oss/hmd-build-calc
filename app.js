@@ -439,14 +439,8 @@ function pairSide(m) {
   return `<span class="side">${[...by].map(([lab, ks]) => `<span class="fx">${[...ks].map(iconBtn).join("")}<small>${esc(lab)}</small></span>`).join("")}</span>`;
 }
 // per row: its name and score, then one line per channel: its effects ↔ the other side's
-// fold(row) -> an id: that row collapses (closed by default, its name and score as the header; opened ones kept in fxOpen)
-const holderRows = (rows, fold) => rows.map((r) => {
-  const pairs = [...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("");
-  const id = fold && fold(r);
-  return id
-    ? `<details class="hold fold" data-fxlist="${id}"${fxOpen.has(id) ? " open" : ""}><summary class="hhead">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></summary>${pairs}</details>`
-    : `<div class="hold"><button class="hhead" data-open="${headKey(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>${pairs}</div>`;
-}).join("");
+const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${headKey(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
+    ${[...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
 // an offer's sections in order (a Family the offer brings in is shown apart, under its own bar)
 const secHtml = (sec) => holderRows(sec.rows);
 
@@ -495,17 +489,17 @@ function ownOf(d, counts) {
 const groupPicks = (counts) => Object.keys(counts).filter((k) => k.startsWith("relic:") && itemOf(k).pool !== "dude");
 // under a Dude or a group: what each of its effects does, then its edges to the rest of the build (the other Dudes'
 // own effects, each picked group relic in its group's row)
-// the effect list collapses (closed by default); the ones opened stay open across re-renders
+// Team view folds (closed by default; the ones opened stay open across re-renders): under each Dude / group, one
+// "Effects" fold holds its effect list and every edge row, so only the headers and relic picks (what's collected) show
 const fxOpen = new Set();
+const fold = (id, label, body) => (body ? `<details class="fxlist" data-fxlist="${id}"${fxOpen.has(id) ? " open" : ""}><summary>${label}</summary>${body}</details>` : "");
 function teamHtml(id, mine, team, counts) {
   const theirs = new Set([...team.flatMap((o) => ownOf(o, counts)), ...groupPicks(counts)].filter((k) => !mine.includes(k)));
   const fx = mine.filter((k) => itemOf(k).fx.length)
     .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxChips(itemOf(k))}</span></div>`).join("");
   const edges = holders(mine, (k) => theirs.has(k));
-  const list = fx ? `<details class="fxlist" data-fxlist="${id}"${fxOpen.has(id) ? " open" : ""}><summary>Effects</summary>${fx}</details>` : "";
-  // under a Dude, each Family / Global row folds like his effect list
-  const fold = id.startsWith("dude:") ? (r) => (r.x.t ? null : id + ">" + headKey(r.x)) : null;
-  return fx || edges.length ? `<div class="tview">${list}${holderRows(edges, fold)}</div>` : "";
+  const body = fx + holderRows(edges);
+  return body ? `<div class="tview">${fold(id, "Effects", body)}</div>` : "";
 }
 
 function renderDraft() {
@@ -560,7 +554,7 @@ function renderDraft() {
     <div class="picks" id="picks"></div></div>`;
   return `${view}<div class="draft${team ? " team" : ""}"><div class="dpane">${team ? "" : `<h3>Offers</h3>${adder}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
-      ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
+      ? `<div class="bgroups">${tiles.join("")}</div>${team ? fold("build", "Build effects", effectBars(itemEffects(items, 8), true)) : section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
       : `<div class="empty">Take an offer to start a build</div>`}</div></div>`;
 }

@@ -185,6 +185,11 @@
 - 2026-11-22 (8): fix: Medical License scales with Damage Dealt (self). Code: its on_deal_damage_wearer hook (anon@5478)
   adds to medical_license_damage_stored; the tagger now reads "For every X damage the Wielder deals". Only tag change.
 
+- 2026-11-22 (9): Draft Team view, for long mature builds (user: get to a section without scrolling past dozens of
+  effects): only each Dude / Family / Global header and its relic picks (collection tracking) stay shown; one closed
+  "Effects" fold per group holds its effect list and every edge row; Build effects folds too. Replaces (6) / (7)'s
+  separate folds. Opened folds stay open across re-renders.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
