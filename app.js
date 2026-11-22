@@ -446,7 +446,8 @@ const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="h
 const secHtml = (sec) => holderRows(sec.rows);
 
 // a meal's extra stat: one chip per stat (its value as the extra stat), the chosen one pressed
-const statChips = (attr, who, cur) => `<div class="chips wsec">${H.foodstats.map((st) => `<button class="fchip" data-${attr}="${who}|${st.id}"
+// once one is chosen only it shows; tapping it clears the choice and brings the rest back
+const statChips = (attr, who, cur) => `<div class="chips wsec">${H.foodstats.filter((st) => !cur || cur === st.id).map((st) => `<button class="fchip" data-${attr}="${who}|${st.id}"
   aria-pressed="${cur === st.id}">${esc(st.name)} ${esc(segText(st.seg.filter((g) => g[0] === "v")))}</button>`).join("")}</div>`;
 
 // Take for a Dude / relic offer; a trinket / meal offer is given to one Dude instead: a button per Dude in the build

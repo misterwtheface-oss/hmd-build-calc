@@ -161,6 +161,9 @@
   the next. Hits: names starting with the text first, offers already in a slot left out. Viewport
   interactive-widget=resizes-content (Android shrinks the page for the keyboard).
 
+- 2026-11-22 (2): Draft meal offer: once an extra stat is chosen only its chip shows; tapping it clears the choice
+  and the full list comes back.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
