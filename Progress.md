@@ -164,6 +164,11 @@
 - 2026-11-22 (2): Draft meal offer: once an extra stat is chosen only its chip shows; tapping it clears the choice
   and the full list comes back.
 
+- 2026-11-22 (3): Draft Team view: a picked Family / Universal / Promoter relic is its group's, no longer counted as an
+  effect of the Dude(s) it applies to. Under a Dude: his own ability, held items and relics, with edges to the other
+  Dudes and to each group (one row per Family / source); under each Family and Global: its picked relics and their
+  edges to the Dudes and other groups (as the offers' Family rows already did).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

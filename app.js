@@ -416,18 +416,17 @@ function putPair(rows, h, ch, own, ownLabel, other, otherLabel) {
 const scoreRows = (rows) => [...rows.values()]
   .map((r) => ({ ...r, score: [...r.ch.keys()].reduce((a, c) => a + chWeight(c), 0) }))
   .sort((a, b) => b.score - a.score || byName(a.x, b.x));
-// Team view: pairs between the source effects and the target effects (ok(key)), grouped by Dude. A Dude counts
-// all his relics; a Family / universal / Promoter relic counts for every Dude of the team it applies to
+// Team view: pairs between the source effects and the target effects (ok(key)), one row per owner: a Dude (his
+// ability and relics) or the group of a Family / Universal / Promoter relic
 const appliesTo = (r, d) => r.fam === "global" || d.fam.includes(r.fam);
-function holders(src, ok, team) {
+function holders(src, ok) {
   const rows = new Map();
   for (const s of src)
     for (const l of PAIR[s] || []) {
       if (!ok(l.o) || !pairOk(l, s, l.o)) continue;
       const t = itemOf(l.o);
       const tu = unitOf(t);
-      const owners = tu.startsWith("dude:") ? [DUDE[tu.slice(5)]] : team.filter((d) => appliesTo(t, d));
-      for (const h of owners.length ? owners : [t]) putPair(rows, h, l.ch, l.o, l.olabel, s, l.label);
+      putPair(rows, tu.startsWith("dude:") ? DUDE[tu.slice(5)] : groupOf(t) || t, l.ch, l.o, l.olabel, s, l.label);
     }
   return scoreRows(rows);
 }
@@ -482,22 +481,20 @@ function slotHtml(i, best, maxes) {
     ${giveOrTake(i, x, o)}</div>`;
 }
 
-// a Dude's active effects in the build: his ability, his bound trinket, his picked relics, and every picked Family /
-// universal / Promoter relic that applies to him
-function activeOf(d, counts) {
-  return ["dude:" + d.t, ...heldKeys(d), ...Object.keys(counts).filter((k) => {
-    const r = k.startsWith("relic:") && itemOf(k);
-    return r && (r.pool === "dude" ? r.dude === d.t : appliesTo(r, d));
-  })];
+// Team view: a Dude's own effects (his ability, his held items, his picked relics); a picked Family / Universal /
+// Promoter relic is its group's, never credited to a Dude (as in the offers' Family rows)
+function ownOf(d, counts) {
+  return ["dude:" + d.t, ...heldKeys(d), ...Object.keys(counts).filter((k) => k.startsWith("relic:") && itemOf(k).dude === d.t)];
 }
-// Team view, under a Dude: what each active effect does, then his edges to the rest of the team (their active effects)
-function teamHtml(d, team, counts) {
-  const mine = activeOf(d, counts);
-  const others = team.filter((o) => o !== d);
-  const theirs = new Set(others.flatMap((o) => activeOf(o, counts)).filter((k) => !mine.includes(k)));
+const groupPicks = (counts) => Object.keys(counts).filter((k) => k.startsWith("relic:") && itemOf(k).pool !== "dude");
+// under a Dude or a group: what each of its effects does, then its edges to the rest of the build (the other Dudes'
+// own effects, each picked group relic in its group's row)
+function teamHtml(mine, team, counts) {
+  const theirs = new Set([...team.flatMap((o) => ownOf(o, counts)), ...groupPicks(counts)].filter((k) => !mine.includes(k)));
   const fx = mine.filter((k) => itemOf(k).fx.length)
     .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxChips(itemOf(k))}</span></div>`).join("");
-  return `<div class="tview">${fx}${holderRows(holders(mine, (k) => theirs.has(k), others))}</div>`;
+  const edges = holders(mine, (k) => theirs.has(k));
+  return fx || edges.length ? `<div class="tview">${fx}${holderRows(edges)}</div>` : "";
 }
 
 function renderDraft() {
@@ -532,10 +529,12 @@ function renderDraft() {
   }).join("");
   const groups = [
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)), heldPicks(dk.slice(5)))}${team
-      ? teamHtml(itemOf(dk), dudeKeys.map(itemOf), counts) : ""}</div>`),
-    ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}</div>`),
+      ? teamHtml(ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts) : ""}</div>`),
+    ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}${team
+      ? teamHtml(groupPicks(counts).filter((k) => itemOf(k).fam === f), dudeKeys.map(itemOf), counts) : ""}</div>`),
     // last: Global, its Universal then Promoter relics, picked as they're collected
-    ...(keys.length ? [`<div class="bgroup"><div class="fhead">${famIcon("global")}<span>${esc(FAM.global.name)}</span></div>${SOURCES.map((p) => relicPicks(relicsOfSource(p))).join("")}</div>`] : []),
+    ...(keys.length ? [`<div class="bgroup"><div class="fhead">${famIcon("global")}<span>${esc(FAM.global.name)}</span></div>${SOURCES.map((p) => relicPicks(relicsOfSource(p))).join("")}${team
+      ? teamHtml(groupPicks(counts).filter((k) => SOURCE[itemOf(k).pool]), dudeKeys.map(itemOf), counts) : ""}</div>`] : []),
   ];
   const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
