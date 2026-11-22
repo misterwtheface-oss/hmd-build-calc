@@ -489,12 +489,15 @@ function ownOf(d, counts) {
 const groupPicks = (counts) => Object.keys(counts).filter((k) => k.startsWith("relic:") && itemOf(k).pool !== "dude");
 // under a Dude or a group: what each of its effects does, then its edges to the rest of the build (the other Dudes'
 // own effects, each picked group relic in its group's row)
-function teamHtml(mine, team, counts) {
+// the effect list collapses (closed by default); the ones opened stay open across re-renders
+const fxOpen = new Set();
+function teamHtml(id, mine, team, counts) {
   const theirs = new Set([...team.flatMap((o) => ownOf(o, counts)), ...groupPicks(counts)].filter((k) => !mine.includes(k)));
   const fx = mine.filter((k) => itemOf(k).fx.length)
     .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxChips(itemOf(k))}</span></div>`).join("");
   const edges = holders(mine, (k) => theirs.has(k));
-  return fx || edges.length ? `<div class="tview">${fx}${holderRows(edges)}</div>` : "";
+  const list = fx ? `<details class="fxlist" data-fxlist="${id}"${fxOpen.has(id) ? " open" : ""}><summary>Effects</summary>${fx}</details>` : "";
+  return fx || edges.length ? `<div class="tview">${list}${holderRows(edges)}</div>` : "";
 }
 
 function renderDraft() {
@@ -530,12 +533,12 @@ function renderDraft() {
   }).join("");
   const groups = [
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)), heldPicks(dk.slice(5)))}${team
-      ? teamHtml(ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts) : ""}</div>`),
+      ? teamHtml(dk, ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts) : ""}</div>`),
     ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}${team
-      ? teamHtml(groupPicks(counts).filter((k) => itemOf(k).fam === f), dudeKeys.map(itemOf), counts) : ""}</div>`),
+      ? teamHtml("family:" + f, groupPicks(counts).filter((k) => itemOf(k).fam === f), dudeKeys.map(itemOf), counts) : ""}</div>`),
     // last: Global, its Universal then Promoter relics, picked as they're collected
     ...(keys.length ? [`<div class="bgroup"><div class="fhead">${famIcon("global")}<span>${esc(FAM.global.name)}</span></div>${SOURCES.map((p) => relicPicks(relicsOfSource(p))).join("")}${team
-      ? teamHtml(groupPicks(counts).filter((k) => SOURCE[itemOf(k).pool]), dudeKeys.map(itemOf), counts) : ""}</div>`] : []),
+      ? teamHtml("global", groupPicks(counts).filter((k) => SOURCE[itemOf(k).pool]), dudeKeys.map(itemOf), counts) : ""}</div>`] : []),
   ];
   const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
@@ -875,6 +878,11 @@ document.addEventListener("click", (e) => {
     }
   }
 });
+
+document.addEventListener("toggle", (e) => {
+  const id = e.target.dataset?.fxlist;
+  if (id) e.target.open ? fxOpen.add(id) : fxOpen.delete(id);
+}, true);
 
 // Draft offer box: a tapped hit must not take focus from the box (the keyboard would drop); Enter takes the first hit;
 // while it has focus on a short screen (a phone keyboard up) it fills the visible area above the keyboard (.kb)

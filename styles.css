@@ -206,6 +206,8 @@ html.kb .adder .search { padding: 6px 10px; }
 .dview { margin: 4px 0 2px; }
 .tview { margin-left: 14px; padding-left: 10px; border-left: 2px solid var(--mustard); }
 .tview .hold { margin-left: 6px; }
+.fxlist summary { cursor: pointer; padding: 4px 0; font: 15px var(--narrow); color: var(--olive); }
+.fxlist[open] summary { color: var(--cream); }
 .fxrow { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .fxrow .vi { padding: 0; border: 0; background: none; cursor: pointer; flex: 0 0 auto; }
 .fxrow .vi img { width: 28px; height: 28px; display: block; }

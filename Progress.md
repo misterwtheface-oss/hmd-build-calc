@@ -176,6 +176,9 @@
 - 2026-11-22 (5): Draft Offers / Team: a full-width two-button bar over both panes (was small chips in the offers
   pane), stuck under the page header while scrolling (header height tracked as --toph).
 
+- 2026-11-22 (6): Draft Team view: each Dude's / group's effect list sits in a collapsible "Effects" section, closed
+  by default; an opened one stays open across re-renders (picks, removals). Edges stay shown.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
