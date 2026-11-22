@@ -155,6 +155,12 @@
   offer brings in gets its own bar (its relics' pairs listed under it); Total = both, still what picks the
   highlighted (best) offer. Each bar kind scales to its own largest among the offers.
 
+- 2026-11-22 (1): Draft offers: one box adds the next offer (replaces a search box per empty slot), at the top of the
+  Offers pane (pinned there on a sideways phone). While it has focus on a short screen (phone keyboard up) it fills
+  the visible strip above the keyboard, hits in columns; a tapped hit or Enter adds it and the keyboard stays up for
+  the next. Hits: names starting with the text first, offers already in a slot left out. Viewport
+  interactive-widget=resizes-content (Android shrinks the page for the keyboard).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

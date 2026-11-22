@@ -462,9 +462,7 @@ function giveOrTake(i, x, o) {
 
 function slotHtml(i, best, maxes) {
   const key = draft.slots[i];
-  if (!key)
-    return `<div class="slot empty"><input class="search" type="search" data-slot="${i}" placeholder="Offer ${i + 1}: Dude, relic, trinket or food" autocomplete="off">
-      <div class="picks" id="picks-${i}"></div></div>`;
+  if (!key) return "";
   const x = itemOf(key);
   const o = overlap(x, draft.build, draft.slotSec[i]);
   const label = x.t ? x.fam.map(famIcon).join("") : poolIcon(x);
@@ -543,19 +541,28 @@ function renderDraft() {
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => heldKeys(itemOf(dk))).map(itemOf)];
   // two panes (side by side on a wide or sideways screen, each scrolling on its own): offers, then the build
-  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3><div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
+  // one box adds the next offer, pinned at the top of the offers pane (no scrolling down to an empty slot)
+  const free = draft.slots.indexOf(null);
+  const adder = free < 0 ? "" : `<div class="adder"><div class="arow">${draft.slots.filter(Boolean).map((k) => img(itemOf(k).icon, itemOf(k).name, "aic")).join("")}
+    <input id="adder" class="search" type="search" enterkeyhint="go" placeholder="Offer ${free + 1}: Dude, relic, trinket or food" autocomplete="off"></div>
+    <div class="picks" id="picks"></div></div>`;
+  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3>${adder}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
       : `<div class="empty">Take an offer to start a build</div>`}</div></div>`;
 }
 
-function pickResults(i, q) {
+function pickResults(q) {
   q = q.trim().toLowerCase();
   if (!q) return "";
   const free = trinketsSorted.filter((x) => !boundTo("trinket", x.id));   // a bound trinket can't be drafted again
-  const hits = [...dudesSorted, ...relicsSorted, ...free, ...foodSorted].filter((x) => match(q, x.name)).slice(0, 8);
-  return hits.map((x) => itemRow(x, `data-pick="${i}|${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
+  const hits = [...dudesSorted, ...relicsSorted, ...free, ...foodSorted]
+    .filter((x) => match(q, x.name) && !draft.slots.includes(keyOf(x)))
+    // names that start with what's typed first, then a word in them, then anywhere (fewer letters to reach a pick)
+    .map((x, i) => { const n = x.name.toLowerCase(); return [n.startsWith(q) ? 0 : n.includes(" " + q) ? 1 : 2, i, x]; })
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, 12).map((h) => h[2]);
+  return hits.map((x) => itemRow(x, `data-pick="${keyOf(x)}"`)).join("") || `<div class="empty">No matches</div>`;
 }
 
 function offer(key) {
@@ -799,10 +806,8 @@ document.addEventListener("click", (e) => {
   const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hbind],[data-fsec],[data-give]");
   if (dr) {
     const ds = dr.dataset;
-    if (ds.pick) {
-      const [i, key] = ds.pick.split("|");
-      draft.slots[+i] = key;
-    } else if (ds.take || ds.give) {
+    if (ds.pick) offer(ds.pick);
+    else if (ds.take || ds.give) {
       // Take: the offer joins the build; Give: a trinket / meal offer goes to the chosen Dude, who then drops out as
       // a candidate for the next ones (one of each per Dude)
       const [i, t] = (ds.give || ds.take).split("|");
@@ -846,8 +851,11 @@ document.addEventListener("click", (e) => {
     saveDraft();
     if (state.tab === "draft") {
       const y = window.scrollY;
+      const typing = !!ds.pick;
       renderList();
       window.scrollTo(0, y);
+      // keep typing: the keyboard stays up for the next offer while a slot is free
+      if (typing) $("#adder")?.focus({ preventScroll: true });
     }
     return;
   }
@@ -867,9 +875,34 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// Draft offer box: a tapped hit must not take focus from the box (the keyboard would drop); Enter takes the first hit;
+// while it has focus on a short screen (a phone keyboard up) it fills the visible area above the keyboard (.kb)
+document.addEventListener("pointerdown", (e) => {
+  if (e.target.closest(".adder [data-pick]")) e.preventDefault();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.target.id !== "adder") return;
+  if (e.key === "Enter") {
+    e.preventDefault();
+    $("#picks [data-pick]")?.click();
+  } else if (e.key === "Escape") e.target.blur();
+});
+function fitKeyboard() {
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : innerHeight;
+  const root = document.documentElement;
+  root.style.setProperty("--vvh", h + "px");
+  root.style.setProperty("--vvt", (vv ? vv.offsetTop : 0) + "px");
+  root.classList.toggle("kb", document.activeElement?.id === "adder" && h < 520);
+}
+window.visualViewport?.addEventListener("resize", fitKeyboard);
+window.visualViewport?.addEventListener("scroll", fitKeyboard);
+document.addEventListener("focusin", fitKeyboard);
+document.addEventListener("focusout", () => setTimeout(fitKeyboard));
+
 document.addEventListener("input", (e) => {
-  if (e.target.dataset.slot != null) {
-    $("#picks-" + e.target.dataset.slot).innerHTML = pickResults(+e.target.dataset.slot, e.target.value);
+  if (e.target.id === "adder") {
+    $("#picks").innerHTML = pickResults(e.target.value);
     return;
   }
   if (e.target.id !== "q") return;

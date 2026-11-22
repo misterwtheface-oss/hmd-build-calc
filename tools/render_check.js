@@ -73,7 +73,7 @@ for (let i = 0; i < named.length; i += 3) {
 }
 draft.view = "offers";
 draft.slots.splice(0, 3, null, null, null);
-tryRender("draft empty slots", () => { renderList(); return els["#list"].innerHTML + pickResults(0, "dude"); });
+tryRender("draft empty slots", () => { renderList(); return els["#list"].innerHTML + pickResults("dude"); });
 if (!overlap(H.relics.find((r) => r.id === "r_jump_shoes"), ["dude:basketball"]).links.length) problems.push("draft: Jump Shoes not linked to Basketball Dude");
 for (const d of H.dudes) tryRender(`dude ${d.t}`, () => VIEWS.dude(d.t));
 for (const r of H.relics) tryRender(`relic ${r.id}`, () => VIEWS.relic(r.id));

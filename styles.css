@@ -160,8 +160,23 @@ h3 { margin: 18px 0 8px; font: 20px var(--title); letter-spacing: .03em; color: 
 .slots { display: flex; flex-direction: column; gap: 8px; }
 .slot { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px 10px; min-width: 0; }
 .slot.best { border-color: var(--mustard); box-shadow: 0 0 0 1px var(--mustard); }
-.slot.empty { padding: 8px; }
 .picks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+/* Draft: one box adds the next offer, pinned at the top of the offers pane; hits as compact rows, in columns when wide */
+.adder { background: var(--ink); padding-bottom: 8px; }
+.arow { display: flex; align-items: center; gap: 6px; }
+.arow .search { flex: 1 1 auto; min-width: 0; }
+.arow .aic { width: 32px; height: 32px; flex: 0 0 32px; }
+.adder .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px; }
+.adder .picks:empty { display: none; }
+.adder .row { padding: 4px 8px; gap: 8px; }
+.adder .row .ic { width: 32px; height: 32px; flex-basis: 32px; }
+.adder .row .name { font-size: 16px; }
+.adder .row .sub { display: none; }
+/* keyboard up on a short screen: the box and its hits fill the visible area above the keyboard */
+html.kb .adder { position: fixed; z-index: 20; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100dvh);
+  padding: 6px 8px; display: flex; flex-direction: column; box-sizing: border-box; }
+html.kb .adder .picks { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+html.kb .adder .search { padding: 6px 10px; }
 .shead { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .shead .rhead { flex: 1 1 auto; width: auto; }
 .slabel { display: flex; gap: 3px; flex: 0 0 auto; }
@@ -262,6 +277,7 @@ table.stats .chiplink img { width: 20px; height: 20px; }
   .draft:not(.team) { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; }
   .draft:not(.team) .dpane { height: calc(100dvh - 58px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 16px; }
   .draft.team .bgroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .dpane .adder { position: sticky; top: 0; z-index: 3; }
 }
 /* Enemies: trait icons in a row on list rows; boss fight lines on the enemy page */
 .row .tail.tr { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; max-width: 76px; }
