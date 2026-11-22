@@ -84,6 +84,7 @@
   separate folds. Opened folds stay open across re-renders.
 
 ## Open
+- [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
