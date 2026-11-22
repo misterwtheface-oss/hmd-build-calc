@@ -240,6 +240,10 @@ html.kb .adder .search { padding: 6px 10px; }
 .hhead img { width: 24px; height: 24px; }
 .hhead span { flex: 1 1 auto; min-width: 0; }
 .hhead b { font: 14px var(--narrow); color: var(--cream); }
+.hold.fold > summary { list-style: none; }
+.hold.fold > summary::-webkit-details-marker { display: none; }
+.hold.fold > summary::before { content: "▸"; color: var(--olive); width: 10px; flex: 0 0 10px; }
+.hold.fold[open] > summary::before { content: "▾"; }
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; margin: 4px 0 0 4px; }
 .pair > i { font-style: normal; color: var(--olive); }
 .pair .side { display: flex; flex-direction: column; gap: 3px; min-width: 0; }

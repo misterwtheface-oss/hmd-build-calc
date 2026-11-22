@@ -179,6 +179,9 @@
 - 2026-11-22 (6): Draft Team view: each Dude's / group's effect list sits in a collapsible "Effects" section, closed
   by default; an opened one stays open across re-renders (picks, removals). Edges stay shown.
 
+- 2026-11-22 (7): Draft Team view: under each Dude, every Family / Global row folds (closed by default, name and score
+  as its header), kept open across re-renders like the Effects list. Dude rows stay open.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
