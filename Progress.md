@@ -182,6 +182,9 @@
 - 2026-11-22 (7): Draft Team view: under each Dude, every Family / Global row folds (closed by default, name and score
   as its header), kept open across re-renders like the Effects list. Dude rows stay open.
 
+- 2026-11-22 (8): fix: Medical License scales with Damage Dealt (self). Code: its on_deal_damage_wearer hook (anon@5478)
+  adds to medical_license_damage_stored; the tagger now reads "For every X damage the Wielder deals". Only tag change.
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
