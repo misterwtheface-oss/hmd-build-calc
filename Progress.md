@@ -173,6 +173,9 @@
   decides who can be offered it. Trinket / meal offers: a Family relic's edges now count in every free Dude's row, not
   only its members' (Crazy Straw <-> False Fangs on every Dude, was Lich Dude only).
 
+- 2026-11-22 (5): Draft Offers / Team: a full-width two-button bar over both panes (was small chips in the offers
+  pane), stuck under the page header while scrolling (header height tracked as --toph).
+
 ## Open
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

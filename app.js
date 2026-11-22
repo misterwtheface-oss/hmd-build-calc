@@ -498,8 +498,9 @@ function teamHtml(mine, team, counts) {
 }
 
 function renderDraft() {
-  const view = `<div class="chips dview">${[["offers", "Offers"], ["team", "Team"]]
-    .map(([v, n]) => `<button class="fchip" data-dview="${v}" aria-pressed="${draft.view === v}">${n}</button>`).join("")}</div>`;
+  // Offers / Team: a full-width bar over both panes, stuck under the page header
+  const view = `<div class="dview">${[["offers", "Offers"], ["team", "Team"]]
+    .map(([v, n]) => `<button data-dview="${v}" aria-pressed="${draft.view === v}">${n}</button>`).join("")}</div>`;
   const team = draft.view === "team";
   const ovs = team ? [] : draft.slots.map((k, i) => (k ? overlap(itemOf(k), draft.build, draft.slotSec[i]) : null));
   const scores = ovs.map((o) => (o ? o.score : -1));
@@ -546,7 +547,7 @@ function renderDraft() {
   const adder = free < 0 ? "" : `<div class="adder"><div class="arow">${draft.slots.filter(Boolean).map((k) => img(itemOf(k).icon, itemOf(k).name, "aic")).join("")}
     <input id="adder" class="search" type="search" enterkeyhint="go" placeholder="Offer ${free + 1}: Dude, relic, trinket or food" autocomplete="off"></div>
     <div class="picks" id="picks"></div></div>`;
-  return `<div class="draft${team ? " team" : ""}"><div class="dpane">${view}${team ? "" : `<h3>Offers</h3>${adder}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
+  return `${view}<div class="draft${team ? " team" : ""}"><div class="dpane">${team ? "" : `<h3>Offers</h3>${adder}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
@@ -895,6 +896,8 @@ function fitKeyboard() {
   root.style.setProperty("--vvt", (vv ? vv.offsetTop : 0) + "px");
   root.classList.toggle("kb", document.activeElement?.id === "adder" && h < 520);
 }
+// the page header's height, for what sticks under it (the Draft's Offers / Team bar)
+if (typeof ResizeObserver !== "undefined") new ResizeObserver(([e]) => document.documentElement.style.setProperty("--toph", e.target.offsetHeight + "px")).observe($(".top"));
 window.visualViewport?.addEventListener("resize", fitKeyboard);
 window.visualViewport?.addEventListener("scroll", fitKeyboard);
 document.addEventListener("focusin", fitKeyboard);

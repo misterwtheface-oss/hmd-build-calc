@@ -259,7 +259,14 @@ table.stats .chiplink img { width: 20px; height: 20px; }
 .give .take img { width: 24px; height: 24px; }
 .give .take.alt { background: var(--panel2); }
 /* Draft: offers and build in two panes; side by side on a wide or sideways screen */
-.list > .draft { grid-column: 1 / -1; }
+.list > .draft, .list > .dview { grid-column: 1 / -1; }
+.dview { position: sticky; top: var(--toph, 0px); z-index: 4; display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--ink); padding: 8px 0; margin-top: -10px; }
+.dview button { padding: 10px 8px; border: 1px solid var(--line); background: var(--panel); color: #d9b7a6;
+  font: 18px var(--narrow); cursor: pointer; }
+.dview button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.dview button:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-left: 0; }
+.dview button[aria-pressed="true"] { background: var(--brown); color: var(--cream); box-shadow: inset 0 -3px 0 var(--mustard); }
 .draft { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .dpane { min-width: 0; }
 .dpane > h3:first-child { margin-top: 0; }
@@ -275,7 +282,9 @@ table.stats .chiplink img { width: 20px; height: 20px; }
   .tab { padding: 8px 2px 6px; }
   main { max-width: none; padding: 8px 12px 0; }
   .draft:not(.team) { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; }
-  .draft:not(.team) .dpane { height: calc(100dvh - 58px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 16px; }
+  .dview { margin-top: -8px; padding: 6px 0; }
+  .dview button { padding: 6px 8px; font-size: 16px; }
+  .draft:not(.team) .dpane { height: calc(100dvh - var(--toph, 40px) - 60px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 16px; }
   .draft.team .bgroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .dpane .adder { position: sticky; top: 0; z-index: 3; }
 }
