@@ -70,6 +70,31 @@ const PAIR = {};
     (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false, wield });
   }
 }
+// two-step pairs (build_data.py p2): effect key -> [{o, mid: the middle effect, ch, label, olabel, give, two}]. The
+// provider feeds what triggers mid, mid makes ch happen, the consumer reacts to it (Cleave -> GET DOWN! -> Dash ->
+// Cool Shades). They hold only while mid is in the build, and a channel reached this way weighs HALF (user 2026-11-23).
+// Built on first use: labels name mid, and the item lookups are defined further down
+const HALF = 0.5;
+let P2 = null;
+function pairs2(k) {
+  if (!P2) {
+    P2 = {};
+    const { keys, names, fac, p2 = [] } = H.pairs;
+    for (const [a, b, c, v, m, pf] of p2) {
+      const mid = keys[m], mx = itemOf(mid), via = ` · via ${(mx?.t ? mx.ab : mx?.name) || ""}`;   // a Dude: his ability
+      const give = `${FACET[fac[pf]]} ${names[v]}${via}`, use = `${FACET.reacts} ${names[c]}${via}`;
+      (P2[keys[a]] = P2[keys[a]] || []).push({ o: keys[b], mid, ch: names[c], label: give, olabel: use, give: true, two: true });
+      (P2[keys[b]] = P2[keys[b]] || []).push({ o: keys[a], mid, ch: names[c], label: use, olabel: give, give: false, two: true });
+    }
+  }
+  return P2[k] || [];
+}
+// an effect's pairs: direct ones, then two-step ones whose middle effect has(mid)
+const pairsOf = (k, has) => [...(PAIR[k] || []), ...pairs2(k).filter((l) => has(l.mid))];
+// a row channel key: a two-step channel is kept apart ("Dash|2") so it scores HALF
+const chKey = (l) => (l.two ? l.ch + "|2" : l.ch);
+const chBase = (c) => c.replace(/\|2$/, "");
+const chRank = (c) => chWeight(chBase(c)) * (c.endsWith("|2") ? HALF : 1);
 // the effects of a unit: a Dude's ability with every relic of his pool (he can hold them all), or one relic
 const effectsOfUnit = (u) => (u.startsWith("dude:") ? [u, ...relicsOfDude(u.slice(5)).map((r) => "relic:" + r.id)] : [u]);
 const fxLabel = ([f, c, s]) => `${FACET[f]} ${c}${s === "team" && f === "gives" ? " · team" : s === "enemy" ? " · enemy" : ""}`;
@@ -123,6 +148,14 @@ function dudeEdges(t) {
 const partners = (u, kind, limit) =>
   (SYN[u] || []).filter((p) => p.u.startsWith(kind + ":")).slice(0, limit);
 const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "), true);
+// two-step synergies of some effects (a Dude's ability + relics, or one relic), in a closed fold: each other effect,
+// what it does and through which effect, rarest channel first
+function twoStep(id, own) {
+  const by = new Map();
+  for (const k of own) for (const l of pairs2(k)) if (!own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
+  const ls = [...by.values()].sort((a, b) => chWeight(b.ch) - chWeight(a.ch) || byName(itemOf(a.o), itemOf(b.o)));
+  return fold("two:" + id, "Indirect synergies", grid(ls.map((l) => mini(itemOf(l.o), esc(l.olabel), true))));
+}
 
 /* ---------- art + chips (all game art goes through these) ---------- */
 const img = (src, alt, cls = "") => (src ? `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="96" height="96">` : "");
@@ -394,24 +427,27 @@ function overlap(x, build, sec) {
   const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
   const offered = x.pool in HELD;              // a held-item offer: each free Dude's row = giving it to him (one each)
   const taken = (t) => offered && HELD[x.pool].get(t);
+  // a two-step pair's middle effect must be in the build or the offer, and weighs its own odds
+  const hasMid = (m) => owner.has(m) || newFx.includes(m);
+  const lw = (l, a, n = n1) => pw(a, l.o, n) * (l.two ? av(l.mid, n) : 1);
   for (const s of newFx)
-    for (const l of PAIR[s] || []) {
+    for (const l of pairsOf(s, hasMid)) {
       const h = owner.get(l.o);
       if (!h || (!offered && !pairOk(l, s, l.o)) || (h.t && taken(h.t))) continue;
-      const w = pw(s, l.o);
-      if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel, w);
+      const w = lw(l, s), c = chKey(l);
+      if (receives && !l.give) putPair(self, x, c, s, l.label, l.o, l.olabel, w);
       // a trinket offer only meets drafted Dudes: a Family / Global relic reaches every Dude ("All Dudes gain",
       // "When a Dude ..."; its Family only decides who can be offered it), so it counts in each free Dude's row
-      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label, w);
-      else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label, w);
+      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, c, l.o, l.olabel, s, l.label, w);
+      else putPair(h.t ? dudeRows : famRows, h, c, l.o, l.olabel, s, l.label, w);
     }
   out.secs.push({ rows: scoreRows(self, mag, WEIGHT.rare) }, { rows: scoreRows(dudeRows, mag, WEIGHT.rare) });
   for (const f of newFams) {
     const rows = new Map();
     for (const r of relicsOfFamilyPool(f))
-      for (const l of PAIR["relic:" + r.id] || []) {
+      for (const l of pairsOf("relic:" + r.id, hasMid)) {
         const h = owner.get(l.o);
-        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label, pw("relic:" + r.id, l.o));
+        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, chKey(l), l.o, l.olabel, "relic:" + r.id, l.label, lw(l, "relic:" + r.id));
       }
     out.secs.push({ head: FAM[f], rows: scoreRows(rows, mag, WEIGHT.rare) });
   }
@@ -425,9 +461,9 @@ function overlap(x, build, sec) {
     const at = (n) => {
       const rows = new Map();
       for (const [e, h] of owner)
-        for (const l of PAIR[e] || []) {
+        for (const l of pairsOf(e, (m) => owner.has(m))) {
           const o = owner.get(l.o);
-          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, l.ch, e, l.label, l.o, l.olabel, pw(e, l.o, n));
+          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, chKey(l), e, l.label, l.o, l.olabel, lw(l, e, n));
         }
       return scoreRows(rows, mag, WEIGHT.rare).reduce((a, r) => a + r.score, 0);
     };
@@ -455,20 +491,20 @@ function putPair(rows, h, ch, own, ownLabel, other, otherLabel, w = 1) {
   addTo(c.mine, other, otherLabel);
   c.w += w;
 }
-// a row's score: each channel's rarity x its magnitude (WEIGHT.mode; the Team view stays flat)
+// a row's score: each channel's rarity x its magnitude (WEIGHT.mode; the Team view stays flat); a two-step channel x HALF
 const scoreRows = (rows, mag = MAG.flat, rare = 1) => [...rows.values()]
-  .map((r) => ({ ...r, score: [...r.ch].reduce((a, [c, v]) => a + chWeight(c) ** rare * mag(v.w), 0) }))
+  .map((r) => ({ ...r, score: [...r.ch].reduce((a, [c, v]) => a + chWeight(chBase(c)) ** rare * (c === chBase(c) ? 1 : HALF) * mag(v.w), 0) }))
   .sort((a, b) => b.score - a.score || byName(a.x, b.x));
 // Team view: pairs between the source effects and the target effects (ok(key)), one row per owner: a Dude (his
 // ability and relics) or the group of a Family / Universal / Promoter relic
 function holders(src, ok) {
   const rows = new Map();
   for (const s of src)
-    for (const l of PAIR[s] || []) {
+    for (const l of pairsOf(s, (m) => ok(m) || src.includes(m))) {
       if (!ok(l.o) || !pairOk(l, s, l.o)) continue;
       const t = itemOf(l.o);
       const tu = unitOf(t);
-      putPair(rows, tu.startsWith("dude:") ? DUDE[tu.slice(5)] : groupOf(t) || t, l.ch, l.o, l.olabel, s, l.label);
+      putPair(rows, tu.startsWith("dude:") ? DUDE[tu.slice(5)] : groupOf(t) || t, chKey(l), l.o, l.olabel, s, l.label);
     }
   return scoreRows(rows);
 }
@@ -482,7 +518,7 @@ function pairSide(m) {
 }
 // per row: its name and score, then one line per channel: its effects ↔ the other side's
 const holderRows = (rows) => rows.map((r) => `<div class="hold"><button class="hhead" data-open="${headKey(r.x)}">${img(r.x.icon, r.x.name)}<span>${esc(r.x.name)}</span><b>${num1(r.score)}</b></button>
-    ${[...r.ch].sort((a, b) => chWeight(b[0]) - chWeight(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
+    ${[...r.ch].sort((a, b) => chRank(b[0]) - chRank(a[0])).map(([, c]) => `<div class="pair">${pairSide(c.theirs)}<i>↔</i>${pairSide(c.mine)}</div>`).join("")}</div>`).join("");
 // an offer's sections in order (a Family the offer brings in is shown apart, under its own bar)
 const secHtml = (sec) => holderRows(sec.rows);
 
@@ -668,6 +704,7 @@ function dudeView(t) {
     ${syn ? section("Effect edges", dudeEdges(t).length ? effectBars(dudeEdges(t), true) : "") : ""}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
     ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
+    ${syn ? twoStep(key, effectsOfUnit(key)) : ""}
     ${section("Relics", relicCards(relicsOfDude(t)))}
     ${section("Family relics", famRelics ? `<div class="chipline">${famRelics}</div>` : "")}
     ${section("Family", grid(mates))}
@@ -687,6 +724,7 @@ function relicView(id) {
   return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}${fnTag(r)}</h2><div class="meta">${pool}</div></div></div>
     <div class="desc">${renderSegs(r.seg)}${syn ? fxLine(r) : ""}</div>
     ${syn ? section("Synergies", grid(linked)) : ""}
+    ${syn ? twoStep(key, [key]) : ""}
     ${section("Names", grid(refs))}`;
 }
 
@@ -728,7 +766,7 @@ function trinketView(id) {
   const linked = (H.links["trinket:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2><div class="meta"><button class="chiplink" data-open="stash:all">${poolIcon(t)}Trinket Stash</button></div></div></div>
     <div class="desc">${renderSegs(t.seg)}${FEATURES.synergy ? fxLine(t) : ""}</div>
-    ${FEATURES.synergy ? section("Synergies", grid(linked)) : ""}`;
+    ${FEATURES.synergy ? section("Synergies", grid(linked)) + twoStep("trinket:" + id, ["trinket:" + id]) : ""}`;
 }
 // the Trinket Stash: every Trinket
 function stashView() {
@@ -745,7 +783,7 @@ function foodView(id) {
   const linked = (H.links["food:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   return `<div class="hero">${img(m.icon, m.name)}<div><h2>${esc(m.name)}</h2><div class="meta"><button class="chiplink" data-open="meals:all">${poolIcon(m)}Food Dude</button></div></div></div>
     <div class="desc">${renderSegs(m.seg)}${FEATURES.synergy ? fxLine(m) : ""}</div>
-    ${FEATURES.synergy ? section("Synergies", grid(linked)) : ""}`;
+    ${FEATURES.synergy ? section("Synergies", grid(linked)) + twoStep("food:" + id, ["food:" + id]) : ""}`;
 }
 // the Food Dude: every stat (as a meal's main stat, as the extra stat), then every meal
 const statVal = (x) => segText(x.seg.filter((g) => g[0] === "v"));
