@@ -109,6 +109,13 @@
   Families at end 6.8 -> 4.8, build synergy 59 -> 69. Scores read smaller (untaken relics no longer count in full).
   Team view scoring unchanged (flat). Script flag: app.js WEIGHT (mode flat / linear / log / sqrt, seen, rare).
 
+- 2026-11-23 (Dude audit, extract docs/dude_audit.md): GET DOWN! scales with any Dude's Max HP (code: the shield
+  reads the target's Max HP); Earpiece = Support / Buff; Cleave emits Hit (each Cleave target is a Direct Damage
+  attack hit; +452 links). Indirect synergies (user: half weight, scores + pages): two-step links A -> B -> C (A feeds
+  what triggers B, B causes the event C reacts to; extract effect_tags.secondary, data pairs.p2, ~5k). Draft / Team
+  view score them x0.5 (app.js HALF) only while B is in the build or the offer, as their own channel line ("Dash|2");
+  Dude / relic / trinket / meal pages list them in a closed "Indirect synergies" fold, "... via GET DOWN!".
+
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Decode the game's relic offer draw (relics_get_available_ids / relic_chooser_reroll; first decompile came out as
