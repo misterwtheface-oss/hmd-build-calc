@@ -114,7 +114,8 @@
   attack hit; +452 links). Indirect synergies (user: half weight, scores + pages): two-step links A -> B -> C (A feeds
   what triggers B, B causes the event C reacts to; extract effect_tags.secondary, data pairs.p2, ~5k). Draft / Team
   view score them x0.5 (app.js HALF) only while B is in the build or the offer, as their own channel line ("Dash|2");
-  Dude / relic / trinket / meal pages list them in a closed "Indirect synergies" fold, "... via GET DOWN!".
+  Dude / relic / trinket / meal pages list them in a closed "Indirect synergies" fold, "... via GET DOWN!". Double-dip (user, same day): a pair already linked directly keeps its chain too
+  (Attack Speed -> Cool Shades scores DPS and, at half, Dash via GET DOWN!).
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
