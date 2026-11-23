@@ -174,6 +174,8 @@ function renderSegs(seg) {
     .join("");
 }
 const section = (title, body) => (body ? `<h3>${esc(title)}</h3>${body}` : "");
+// a Dude's base stats or an Enemy's stats, [name, text] in the game's own format
+const statTable = (stats) => (stats.length ? `<table class="stats">${stats.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(v)}</td></tr>`).join("")}</table>` : "");
 const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</div>` : "");
 
 /* ---------- tabs ---------- */
@@ -493,13 +495,14 @@ const groupPicks = (counts) => Object.keys(counts).filter((k) => k.startsWith("r
 // "Effects" fold holds its effect list and every edge row, so only the headers and relic picks (what's collected) show
 const fxOpen = new Set();
 const fold = (id, label, body) => (body ? `<details class="fxlist" data-fxlist="${id}"${fxOpen.has(id) ? " open" : ""}><summary>${label}</summary>${body}</details>` : "");
-function teamHtml(id, mine, team, counts) {
+function teamHtml(id, mine, team, counts, stats = []) {
   const theirs = new Set([...team.flatMap((o) => ownOf(o, counts)), ...groupPicks(counts)].filter((k) => !mine.includes(k)));
   const fx = mine.filter((k) => itemOf(k).fx.length)
     .map((k) => `<div class="fxrow">${iconBtn(k)}<span class="chipline">${fxChips(itemOf(k))}</span></div>`).join("");
   const edges = holders(mine, (k) => theirs.has(k));
   const body = fx + holderRows(edges);
-  return body ? `<div class="tview">${fold(id, "Effects", body)}</div>` : "";
+  const html = fold(id + "|stats", "Base stats", statTable(stats)) + fold(id, "Effects", body);
+  return html ? `<div class="tview">${html}</div>` : "";
 }
 
 function renderDraft() {
@@ -536,7 +539,7 @@ function renderDraft() {
   }).join("");
   const groups = [
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)), heldPicks(dk.slice(5)))}${team
-      ? teamHtml(dk, ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts) : ""}</div>`),
+      ? teamHtml(dk, ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts, itemOf(dk).stats) : ""}</div>`),
     // a Family no drafted Dude is in, reached by a relic taken on its own (the Scavenger event): only its taken relics
     ...[...fams, ...strays].map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(fams.includes(f)
       ? relicsOfFamilyPool(f) : relicsOfFamilyPool(f).filter((r) => counts["relic:" + r.id]))}${team
@@ -618,6 +621,7 @@ function dudeView(t) {
     .map((x) => mini(x, x.id ? esc(poolLabel(x)) : ""));
   const syn = FEATURES.synergy;
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
+    ${statTable(d.stats)}
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
     ${syn ? section("Effect edges", dudeEdges(t).length ? effectBars(dudeEdges(t), true) : "") : ""}
@@ -729,11 +733,10 @@ function enemyView(id) {
   if (!e) return null;
   const when = [e.from > 1 ? "From round " + e.from : "From the start", e.fromc !== e.from ? "Challenge: round " + e.fromc : "",
     e.to ? "Last round " + e.to : "", tierText(e.tiers), e.fly ? "Flying" : ""].filter(Boolean);
-  const stats = e.stats.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(v)}</td></tr>`).join("");
   const bosses = e.bosses.map(([wk, tiers, list]) => `<div class="boss"><span class="bwk">Round ${wk}${tierText(tiers) ? "<br>" + tierText(tiers) : ""}</span>
     <span class="bparts">${list.map(([t, n]) => `<span class="bpart">${n ? n + "×" : ""}${enemyChip(t)}</span>`).join("")}</span></div>`).join("");
   return `<div class="hero">${img(e.icon, e.name)}<div><h2>${esc(e.name)}</h2><div class="meta">${when.map((w) => `<span class="tag">${esc(w)}</span>`).join("")}</div></div></div>
-    <table class="stats">${stats}</table>
+    ${statTable(e.stats)}
     ${section("Traits", e.traits.length ? `<div class="rcards">${e.traits.map(traitCard).join("")}</div>` : "")}
     ${section("Boss fights", bosses)}`;
 }

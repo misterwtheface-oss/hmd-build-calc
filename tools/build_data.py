@@ -128,6 +128,8 @@ def main():
         dudes.append({"t": d["type"], "name": d["name"], "fam": d["families"] or [GLOBAL],
                       "ab": d["ability"]["name"], "seg": d["segments"], "fx": fx(d),
                       "roles": roles.get(d["type"], []), "fn": fn("dude:" + d["type"]),
+                      # base stats (extract tools/dude_stats_map.py), in the game's own format
+                      "stats": [[s["name"], s["text"]] for s in d.get("stats", [])],
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})
 
     relics = []

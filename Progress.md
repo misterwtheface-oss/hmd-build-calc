@@ -87,6 +87,13 @@
   Hidden Daggers with no Warrior) gets that Family's group holding only the relic(s) taken, not the whole pool (was a
   loose tile). Its Team view rows work as for any Family. Offer scoring unchanged.
 
+- 2026-11-23 (2): Dude base stats (user): every Dude's page shows his stats under the header, as the Enemy page does
+  (Max HP, DPS, Attack Speed, Run Speed, then any other stat he starts with: Crit Chance, Evasion, Deflection, Block
+  Chance, Toughness, Cleave, Regeneration, Lifesteal, Knockout Rounds). Team view: a closed "Base stats" fold under each
+  Dude, above Effects. Source: his DudeType info x the stat's Dude baseline (HP x100, DPS x20, Attack Speed x2), extract
+  tools/dude_stats_map.py. Left out: Size (several Dudes read 0), Run Speed for Regular Dude and Vampire (not set in
+  their definition; the default is not decoded).
+
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
