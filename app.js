@@ -336,6 +336,19 @@ function bind(kind, t, id, sec) {
 }
 const unbind = (kind, t) => delete HELD[kind].map()[t];
 const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) => f !== "global" && FAM[f]);
+// Draft weighting (script flag; tools/weight_preview.js compares the modes on simulated drafts; user pick 2026-11-23:
+// log, seen 25). "flat": a row scores each channel's rarity once, however many pairs it holds (2026-11-18). "linear" /
+// "log" (gradual: log2(1 + w)) / "sqrt" (inflates pool odds, undoes dilution): each synergy pair weighs by
+// how sure its two effects are to be in the build: taken (a Dude's ability, a picked relic, a held item, the offer
+// itself) = 1, a relic still in the pool = seen / pool size; a row's channel scores rarity x f(its pair weights), so
+// a channel the build has invested in grows. Pool = universal + each Family with a member + each drafted Dude's
+// relics, drawn uniformly (assumed; the game's draw rule isn't decoded): a Dude offer that grows it dilutes the odds
+// of the build's own pool relics, scored as a minus.
+const WEIGHT = { mode: "log", seen: 25, rare: 1 };   // rare: exponent on channel rarity in offer scores (1 = as is)
+const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w) };
+const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
+  + types.reduce((a, t) => a + relicsOfDude(t).length, 0);
+const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build, sec) {
   const items = build.map(itemOf);
@@ -367,6 +380,16 @@ function overlap(x, build, sec) {
     if (!newFx.includes(keyOf(r))) owner.set(keyOf(r), groupOf(r));
   // sections: the offer (what it receives), each build Dude (what he receives from the offer), each Family the
   // offer brings in (vs the build's Dudes and Families only), each build Family (what it takes from the offer)
+  // pair weights (WEIGHT): the pool before the offer (n0) and after it (n1: a new Dude type adds his relics, a new
+  // Family its pool); a relic not taken weighs its odds in the pool it is scored in
+  const mag = MAG[WEIGHT.mode] || MAG.flat;
+  const have = new Set(build);
+  const newFams = x.t ? x.fam.filter((f) => f !== "global" && FAM[f] && !fams.includes(f)) : [];
+  const types = team.map((d) => d.t);
+  const n0 = poolSize(types, fams);
+  const n1 = x.t && !types.includes(x.t) ? poolSize([...types, x.t], [...fams, ...newFams]) : n0;
+  const av = (e, n) => (have.has(e) || e === k || !e.startsWith("relic:") ? 1 : poolOdds(n));
+  const pw = (a, b, n = n1) => av(a, n) * av(b, n);
   const self = new Map(), dudeRows = new Map(), famRows = new Map();
   const receives = mine.startsWith("dude:");   // a Dude, or one of his relics
   const offered = x.pool in HELD;              // a held-item offer: each free Dude's row = giving it to him (one each)
@@ -375,33 +398,48 @@ function overlap(x, build, sec) {
     for (const l of PAIR[s] || []) {
       const h = owner.get(l.o);
       if (!h || (!offered && !pairOk(l, s, l.o)) || (h.t && taken(h.t))) continue;
-      if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel);
+      const w = pw(s, l.o);
+      if (receives && !l.give) putPair(self, x, l.ch, s, l.label, l.o, l.olabel, w);
       // a trinket offer only meets drafted Dudes: a Family / Global relic reaches every Dude ("All Dudes gain",
       // "When a Dude ..."; its Family only decides who can be offered it), so it counts in each free Dude's row
-      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label);
-      else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label);
+      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, l.ch, l.o, l.olabel, s, l.label, w);
+      else putPair(h.t ? dudeRows : famRows, h, l.ch, l.o, l.olabel, s, l.label, w);
     }
-  out.secs.push({ rows: scoreRows(self) }, { rows: scoreRows(dudeRows) });
-  for (const f of x.t ? x.fam.filter((f) => f !== "global" && !fams.includes(f)) : []) {
+  out.secs.push({ rows: scoreRows(self, mag, WEIGHT.rare) }, { rows: scoreRows(dudeRows, mag, WEIGHT.rare) });
+  for (const f of newFams) {
     const rows = new Map();
     for (const r of relicsOfFamilyPool(f))
       for (const l of PAIR["relic:" + r.id] || []) {
         const h = owner.get(l.o);
-        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label);
+        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, l.ch, l.o, l.olabel, "relic:" + r.id, l.label, pw("relic:" + r.id, l.o));
       }
-    out.secs.push({ head: FAM[f], rows: scoreRows(rows) });
+    out.secs.push({ head: FAM[f], rows: scoreRows(rows, mag, WEIGHT.rare) });
   }
-  out.secs.push({ rows: scoreRows(famRows) });
+  out.secs.push({ rows: scoreRows(famRows, mag, WEIGHT.rare) });
   for (const sec of out.secs) sec.score = sec.rows.reduce((a, r) => a + r.score, 0);
   // a held item goes to one Dude: it scores its best Dude, not all of them
   if (offered) out.secs[1].score = out.secs[1].rows.length ? out.secs[1].rows[0].score : 0;
+  // dilution: what the build's own pairs lose when the pool grows from n0 to n1 (each pair once, under its receiver)
+  out.dilute = 0;
+  if (n1 > n0 && WEIGHT.mode !== "flat") {
+    const at = (n) => {
+      const rows = new Map();
+      for (const [e, h] of owner)
+        for (const l of PAIR[e] || []) {
+          const o = owner.get(l.o);
+          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, l.ch, e, l.label, l.o, l.olabel, pw(e, l.o, n));
+        }
+      return scoreRows(rows, mag, WEIGHT.rare).reduce((a, r) => a + r.score, 0);
+    };
+    out.dilute = Math.round((at(n1) - at(n0)) * 10) / 10;
+  }
   // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
-  const total = out.secs.reduce((a, sec) => a + sec.score, 0) + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  const total = out.secs.reduce((a, sec) => a + sec.score, 0) + out.dilute + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   out.score = Math.round(total * 10) / 10;
   // shown apart: what each Family the offer brings in adds (its relics), and the offer's own fit (the rest);
   // the recommendation still ranks by the combined score
   out.newFams = out.secs.filter((sec) => sec.head).map((sec) => ({ f: sec.head, score: Math.round(sec.score * 10) / 10, rows: sec.rows }));
-  out.own = Math.round((total - out.newFams.reduce((a, n) => a + n.score, 0)) * 10) / 10;
+  out.own = Math.round((total - out.dilute - out.newFams.reduce((a, n) => a + n.score, 0)) * 10) / 10;
   return out;
 }
 
@@ -409,15 +447,17 @@ function overlap(x, build, sec) {
 // side's}, effect key -> facet labels}; a row scores the weight of each distinct channel it holds
 const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
 const headKey = (h) => (h.t ? "dude:" + h.t : FAM[h.id] === h || h.src ? "family:" + h.id : keyOf(h));
-function putPair(rows, h, ch, own, ownLabel, other, otherLabel) {
+function putPair(rows, h, ch, own, ownLabel, other, otherLabel, w = 1) {
   const hk = headKey(h);
   const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
-  const c = row.ch.get(ch) || row.ch.set(ch, { theirs: new Map(), mine: new Map() }).get(ch);
+  const c = row.ch.get(ch) || row.ch.set(ch, { theirs: new Map(), mine: new Map(), w: 0 }).get(ch);
   addTo(c.theirs, own, ownLabel);
   addTo(c.mine, other, otherLabel);
+  c.w += w;
 }
-const scoreRows = (rows) => [...rows.values()]
-  .map((r) => ({ ...r, score: [...r.ch.keys()].reduce((a, c) => a + chWeight(c), 0) }))
+// a row's score: each channel's rarity x its magnitude (WEIGHT.mode; the Team view stays flat)
+const scoreRows = (rows, mag = MAG.flat, rare = 1) => [...rows.values()]
+  .map((r) => ({ ...r, score: [...r.ch].reduce((a, [c, v]) => a + chWeight(c) ** rare * mag(v.w), 0) }))
   .sort((a, b) => b.score - a.score || byName(a.x, b.x));
 // Team view: pairs between the source effects and the target effects (ok(key)), one row per owner: a Dude (his
 // ability and relics) or the group of a Family / Universal / Promoter relic
@@ -479,7 +519,8 @@ function slotHtml(i, best, maxes) {
     <div class="rdesc">${text}</div>${x.pool === "food" ? statChips("fsec", i, draft.slotSec[i]) : ""}
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.own, maxes.own)}<b>${num1(o.own)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.filter((sec) => !sec.head).map(secHtml).join("")}
       ${o.newFams.map((n) => `<div class="ovl nfam"><button class="chiplink" data-open="family:${n.f.id}">${famIcon(n.f.id)}${esc(n.f.name)}</button>${bar(n.score, maxes.fam)}<b>${num1(n.score)}</b></div>${holderRows(n.rows)}`).join("")}
-      ${o.newFams.length ? `<div class="ovl total"><span>Total</span>${bar(o.score, maxes.total)}<b>${num1(o.score)}</b></div>` : ""}` : ""}
+      ${o.dilute ? `<div class="ovl nfam"><span>Pool dilution</span><span></span><b>${num1(o.dilute)}</b></div>` : ""}
+      ${o.newFams.length || o.dilute ? `<div class="ovl total"><span>Total</span>${bar(o.score, maxes.total)}<b>${num1(o.score)}</b></div>` : ""}` : ""}
     ${giveOrTake(i, x, o)}</div>`;
 }
 

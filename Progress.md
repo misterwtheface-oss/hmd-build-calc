@@ -99,8 +99,19 @@
   Ghost, Skeleton are 0 = drawn smallest; sprite scale lerp(0.5, 0.8, size / SIZE_MAX), no combat code reads it),
   listed as the game's percent, a 0 hidden as on the Enemy page.
 
+- 2026-11-23 (4): Draft offer weighting by pool odds (user; replaces 2026-11-18 (3)'s flat channel count, receivers
+  unchanged). Each synergy pair weighs by how sure its two effects are to be in the build: taken (Dude ability, picked
+  relic, held item, the offer) = 1, a relic still in the pool = 25 / pool size (pool = universal 24 + 8 per Family
+  with a member + 7 per drafted Dude type; uniform draw assumed, the game's draw rule is not decoded). A row's channel
+  scores rarity x log2(1 + its pair weights): grows with how much the build has invested, gradually (user wanted
+  gradual; sqrt was tried and dropped, it inflates pool odds and undid dilution). A Dude offer that grows the pool
+  shows a "Pool dilution" minus = what the build's own pairs lose. Simulated drafts (tools/weight_preview.js, 200 runs):
+  Families at end 6.8 -> 4.8, build synergy 59 -> 69. Scores read smaller (untaken relics no longer count in full).
+  Team view scoring unchanged (flat). Script flag: app.js WEIGHT (mode flat / linear / log / sqrt, seen, rare).
+
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
-- [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
+- [ ] Decode the game's relic offer draw (relics_get_available_ids / relic_chooser_reroll; first decompile came out as
+  fragments) and replace the uniform-draw assumption in the Draft weighting.
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
