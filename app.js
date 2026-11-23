@@ -524,6 +524,7 @@ function renderDraft() {
   const keys = Object.keys(counts);
   const dudeKeys = keys.filter((k) => k.startsWith("dude:"));
   const fams = buildFams(dudeKeys.map(itemOf));
+  const strays = [...new Set(keys.map(itemOf).filter((x) => x.pool === "family" && FAM[x.fam] && !fams.includes(x.fam)).map((x) => x.fam))];
   const relicPicks = (rs, extra = "") => `<div class="rpicks">${rs.map((r) => `<button class="rpick${counts["relic:" + r.id] ? " on" : ""}" data-toggle="relic:${r.id}" title="${esc(r.name)}"
     aria-pressed="${!!counts["relic:" + r.id]}">${img(r.icon, r.name)}</button>`).join("")}${extra}</div>`;
   // a Dude's held items (trinket, meal given from an offer) sit lit after his relics; tap one to take it back
@@ -536,13 +537,15 @@ function renderDraft() {
   const groups = [
     ...dudeKeys.map((dk) => `<div class="bgroup">${tile(dk)}${relicPicks(relicsOfDude(dk.slice(5)), heldPicks(dk.slice(5)))}${team
       ? teamHtml(dk, ownOf(itemOf(dk), counts), dudeKeys.map(itemOf).filter((o) => "dude:" + o.t !== dk), counts) : ""}</div>`),
-    ...fams.map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(relicsOfFamilyPool(f))}${team
+    // a Family no drafted Dude is in, reached by a relic taken on its own (the Scavenger event): only its taken relics
+    ...[...fams, ...strays].map((f) => `<div class="bgroup"><div class="fhead">${famIcon(f)}<span>${esc(FAM[f].name)}</span></div>${relicPicks(fams.includes(f)
+      ? relicsOfFamilyPool(f) : relicsOfFamilyPool(f).filter((r) => counts["relic:" + r.id]))}${team
       ? teamHtml("family:" + f, groupPicks(counts).filter((k) => itemOf(k).fam === f), dudeKeys.map(itemOf), counts) : ""}</div>`),
     // last: Global, its Universal then Promoter relics, picked as they're collected
     ...(keys.length ? [`<div class="bgroup"><div class="fhead">${famIcon("global")}<span>${esc(FAM.global.name)}</span></div>${SOURCES.map((p) => relicPicks(relicsOfSource(p))).join("")}${team
       ? teamHtml("global", groupPicks(counts).filter((k) => SOURCE[itemOf(k).pool]), dudeKeys.map(itemOf), counts) : ""}</div>`] : []),
   ];
-  const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam); };
+  const picked = (k) => { const x = itemOf(k); return x.pool === "dude" ? counts["dude:" + x.dude] : SOURCE[x.pool] || fams.includes(x.fam) || strays.includes(x.fam); };
   const loose = keys.filter((k) => k.startsWith("relic:") && !picked(k));
   const tiles = [...groups, ...(loose.length ? [`<div class="grid">${loose.map(tile).join("")}</div>`] : [])];
   const items = [...draft.build.map(itemOf), ...dudeKeys.flatMap((dk) => heldKeys(itemOf(dk))).map(itemOf)];

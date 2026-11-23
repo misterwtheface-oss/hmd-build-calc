@@ -83,6 +83,10 @@
   "Effects" fold per group holds its effect list and every edge row; Build effects folds too. Replaces (6) / (7)'s
   separate folds. Opened folds stay open across re-renders.
 
+- 2026-11-23: Draft Build: a Family relic taken when no drafted Dude is in its Family (the Scavenger event, e.g.
+  Hidden Daggers with no Warrior) gets that Family's group holding only the relic(s) taken, not the whole pool (was a
+  loose tile). Its Team view rows work as for any Family. Offer scoring unchanged.
+
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] User review of the receiver-based Draft weighting (2026-11-18 (3)); channel weights (rarity) unchanged.
