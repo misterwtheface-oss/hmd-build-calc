@@ -93,6 +93,11 @@
   Dude, above Effects. Source: his DudeType info x the stat's Dude baseline (HP x100, DPS x20, Attack Speed x2), extract
   tools/dude_stats_map.py. Left out: Size (several Dudes read 0), Run Speed for Regular Dude and Vampire (not set in
   their definition; the default is not decoded).
+- 2026-11-23 (3): gaps of (2) closed from code (combatant_type_inherit disassembly, DudeType decompile): a Dude or Enemy
+  that sets no Run Speed runs at 1.0 = 20 Ft/Second (Regular Dude, Vampire, 41 enemies now show it); Attack Power (hit
+  damage) = 10 x DPS / Attack Speed multipliers, now listed for Dudes and Enemies; Size is real (Medic, Nude, Echo,
+  Ghost, Skeleton are 0 = drawn smallest; sprite scale lerp(0.5, 0.8, size / SIZE_MAX), no combat code reads it),
+  listed as the game's percent, a 0 hidden as on the Enemy page.
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
