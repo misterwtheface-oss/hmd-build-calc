@@ -127,5 +127,4 @@
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
   In progress as the Dude audit (alphabetical, one Dude at a time, user analysis + code answers only, no Claude
-  opinion): extract docs/dude_audit.md. Agent Dude done 2026-11-23 (incl. relic blurbs); Alien Dude in progress (all Q&A answered, rulings applied;
-  relic blurbs not written yet).
+  opinion): extract docs/dude_audit.md. Agent Dude done 2026-11-23 (incl. relic blurbs); Alien Dude done 2026-11-23 (incl. relic blurbs).
