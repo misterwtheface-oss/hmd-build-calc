@@ -116,6 +116,9 @@
   view score them x0.5 (app.js HALF) only while B is in the build or the offer, as their own channel line ("Dash|2");
   Dude / relic / trinket / meal pages list them in a closed "Indirect synergies" fold, "... via GET DOWN!". Double-dip (user, same day): a pair already linked directly keeps its chain too
   (Attack Speed -> Cool Shades scores DPS and, at half, Dash via GET DOWN!).
+- 2026-11-23 (Dude audit, Alien Dude): Dissection Kit = Support / Heal; new edge Prevent Knock Out (Bulletproof Suit,
+  Dissection Kit: a full heal inside a Fatal Damage hook) links to every On Fatal Damage effect (+68 links); Beam
+  Splitter shield and Dissection Kit heal go to other Dudes, never Alien (code scope fixes).
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
@@ -124,4 +127,5 @@
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
   In progress as the Dude audit (alphabetical, one Dude at a time, user analysis + code answers only, no Claude
-  opinion): extract docs/dude_audit.md. Agent Dude done 2026-11-23 (incl. relic blurbs); next: Alien Dude.
+  opinion): extract docs/dude_audit.md. Agent Dude done 2026-11-23 (incl. relic blurbs); Alien Dude in progress (all Q&A answered, rulings applied;
+  relic blurbs not written yet).
