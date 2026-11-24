@@ -803,6 +803,10 @@ function chView(c) {
     ${section(ch.stat ? "Scales with it" : "Reacts to it", side(ch.use))}`;
 }
 
+// held picks the other way round: the Dudes whose top 4 (picks.tr / picks.fd) hold this trinket / meal, one row per placement
+const pickedBy = (k, id) => [0, 1, 2, 3].map((i) => [i, dudesSorted.filter((d) => d.picks?.[k][i] === id)]).filter(([, ds]) => ds.length)
+  .map(([i, ds]) => `<div class="meta"><span class="lbl">#${i + 1}</span></div>${grid(ds.map((d) => mini(d)))}`).join("");
+
 // a Trinket: its effect and the units it links to (a Wielder effect meets the Dude it is bound to)
 function trinketView(id) {
   const t = TRINKET[id];
@@ -810,6 +814,7 @@ function trinketView(id) {
   const linked = (H.links["trinket:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2><div class="meta"><button class="chiplink" data-open="stash:all">${poolIcon(t)}Trinket Stash</button></div></div></div>
     <div class="desc">${renderSegs(t.seg)}${FEATURES.synergy ? fxLine(t) : ""}</div>
+    ${section("Recommended on", pickedBy("tr", id))}
     ${FEATURES.synergy ? section("Synergies", grid(linked)) + twoStep("trinket:" + id, ["trinket:" + id]) : ""}`;
 }
 // the Trinket Stash: every Trinket
@@ -827,6 +832,7 @@ function foodView(id) {
   const linked = (H.links["food:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   return `<div class="hero">${img(m.icon, m.name)}<div><h2>${esc(m.name)}</h2><div class="meta"><button class="chiplink" data-open="meals:all">${poolIcon(m)}Food Dude</button></div></div></div>
     <div class="desc">${renderSegs(m.seg)}${FEATURES.synergy ? fxLine(m) : ""}</div>
+    ${section("Recommended on", pickedBy("fd", id))}
     ${FEATURES.synergy ? section("Synergies", grid(linked)) + twoStep("food:" + id, ["food:" + id]) : ""}`;
 }
 // the Food Dude: every stat (as a meal's main stat, as the extra stat), then every meal

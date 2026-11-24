@@ -147,6 +147,8 @@
   Frankendude (Lich dropped); Fedora = Max HP + Attack Power payoffs with no relic needing copies (Manager,
   Construction, Druid; more candidates in the screen). Code: Fedora walks Roster order, which skips summon types;
   the knocked-out count Shovel / Organ Bucket read skips summons (dude_knock_out, roster_refresh_num_unconscious_dudes).
+- 2026-11-24 (6): Trinket and food pages: Recommended on section (one shared pickedBy), the Dudes whose top 4 hold it,
+  one row per placement #1-#4 (empty placements skipped); for the user's per-trinket review before the upper bound.
 
 ## Open
 - [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
