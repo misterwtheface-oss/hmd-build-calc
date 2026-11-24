@@ -131,8 +131,10 @@ function effectBars(eff, big) {
     .map(([k, v, c = k]) => `<span class="eff"${big ? ` data-open="ch:${encodeURIComponent(c)}"` : ""}><span>${esc(k)}</span><b>${v}</b>${bar(v, max)}</span>`)
     .join("")}</div>`;
 }
-// a Dude's effect edges, one bar per higher-order group of the linked channel (Damage, Crit, Defense ...): n = how many
-// of his effects (ability + relics) touch that group; under the bar, each facet in it (opens its channel)
+// a Dude's effect edges, one bar per higher-order group of the linked channel (Damage, Crit, Defense ...), in two
+// columns: Producer (Gives / Triggers) and Consumer (Scales / On / Boosts; the chip rail side, receives()). n = how
+// many of his effects (ability + relics) touch that group on that side; under the bar, each facet in it (opens its
+// channel). Each column bars against its own largest n (rule A-magnitude-bars)
 const EDGE_GROUPS = {
   Damage: ["Attack Power", "Attack Speed", "DPS", "Damage Dealt", "Cleave", "Hit"],
   Crit: ["Crit", "Crit Chance", "Direct Crit"],
@@ -143,11 +145,11 @@ const EDGE_GROUPS = {
 };
 const EDGE_GROUP = Object.fromEntries(Object.entries(EDGE_GROUPS).flatMap(([g, cs]) => cs.map((c) => [c, g])));
 const edgeGroup = (f) => EDGE_GROUP[chOf(f[1])] || chOf(f[1]);
-function dudeEdges(t) {
+function dudeEdges(t, consumer) {
   const by = new Map();
   for (const x of [DUDE[t], ...relicsOfDude(t)]) {
     const seen = new Set();
-    for (const f of fxShown(x)) {
+    for (const f of fxShown(x).filter((f) => receives(f) === consumer)) {
       const g = edgeGroup(f), e = by.get(g) || { g, n: 0, fx: new Map() };
       if (!seen.has(g)) e.n++, seen.add(g);
       e.fx.set(fxLabel(f), f);
@@ -161,6 +163,11 @@ function edgeBars(es) {
   return `<div class="effects big">${es
     .map((e) => `<div class="eff grp"><span>${esc(e.g)}</span><b>${e.n}</b>${bar(e.n, max)}<span class="chipline">${[...e.fx.values()].map(fxChip).join("")}</span></div>`)
     .join("")}</div>`;
+}
+function edgeColumns(t) {
+  const cols = [["Producer", false], ["Consumer", true]].map(([name, c]) => [name, dudeEdges(t, c)]);
+  return cols.some(([, es]) => es.length)
+    ? `<div class="ecols">${cols.map(([name, es]) => `<div><div class="ecol">${name}</div>${edgeBars(es)}</div>`).join("")}</div>` : "";
 }
 
 // partner units of a unit (Dudes or standalone relics), strongest first, each with the channels that join them
@@ -684,7 +691,7 @@ function offer(key) {
 /* ---------- detail views ---------- */
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
-  return `<div class="rcard"><button class="rhead" data-open="${keyOf(r)}">${img(r.icon, r.name)}<span>${esc(r.name)}</span>${fnTag(r)}</button>
+  return `<div class="rcard"><button class="rhead" data-open="${keyOf(r)}">${img(r.icon, r.name)}<span>${r.pr ? `<b class="rank">#${r.pr}</b>` : ""}${esc(r.name)}</span>${fnTag(r)}</button>
     <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
@@ -699,9 +706,8 @@ function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
   const key = "dude:" + t;
-  // Role (game) badges alone; below, every Function / Focus of his ability + relics together, one row per Function:
-  // its name once, then each Focus
-  // ×n = how many of his effects (ability + relics) carry that Function / Focus
+  // Effect functions: every Function / Focus of his ability + relics together, one row per Function: its name once,
+  // then each Focus; ×n = how many of his effects (ability + relics) carry that Function / Focus
   const kit = [d, ...relicsOfDude(t)].filter((x) => x.fn);
   const fnN = (x) => kit.filter((y) => fnText(y) === fnText(x)).length;
   const fns = [...new Map(kit.map((x) => [fnText(x), x])).values()].sort((a, b) => fnRank(a) - fnRank(b));
@@ -709,11 +715,10 @@ function dudeView(t) {
     .map((f) => `<div class="tags fn-${f}"><span class="fnhead">${esc(f)}:</span>${fns.filter((x) => x.fn[0] === f)
       .map((x) => `<span class="tag fn fn-${f}">${esc(x.fn[1] || f)}<b>×${fnN(x)}</b></span>`).join("")}</div>`)
     .join("");
-  const role = FEATURES.roles && (d.roles.length || fns.length)
-    ? `<div class="role">${d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : ""}${fnRows ? `<div class="fns"><span class="lbl">Function:</span><div>${fnRows}</div></div>` : ""}</div>`
-    : "";
-  const famRelics = d.fam.map((f) => famChip(f)).join("");
-  const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
+  const roleRow = FEATURES.roles && d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : "";
+  // his relics in the audit's priority order (rank pr), unranked ones A-Z after
+  const relics = relicsOfDude(t).sort((a, b) => (a.pr || 1e9) - (b.pr || 1e9));
+  const family = d.fam.map((f) => `<div class="meta">${famChip(f)}</div>${grid(membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)))}`).join("");
   const out = refsFrom(key).map((e) => e.b.split(":")[1]).filter((x) => DUDE[x]).map((x) => mini(DUDE[x]));
   const inbound = refsTo(key)
     .map((e) => e.a.split(":"))
@@ -721,17 +726,16 @@ function dudeView(t) {
     .filter((x) => x && !(x.id && x.dude === t))
     .map((x) => mini(x, x.id ? esc(poolLabel(x)) : ""));
   const syn = FEATURES.synergy;
-  return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
+  return `<div class="hero dhero">${img(d.icon, d.name)}<div><div class="hname"><h2>${esc(d.name)}</h2>${d.fam.map(famChip).join("")}</div>${roleRow}</div></div>
     ${statTable(d.stats, DUDE_STAT_MAX)}
-    ${role}
-    ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
-    ${syn ? section("Effect edges", dudeEdges(t).length ? edgeBars(dudeEdges(t)) : "") : ""}
+    ${FEATURES.roles ? section("Effect functions", fnRows ? `<div class="role">${fnRows}</div>` : "") : ""}
+    ${syn ? fold("edges:" + t, "Effect edges", edgeColumns(t)) : ""}
+    ${section("Intrinsic effect", d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : "")}
+    ${section("Relics", relicCards(relics))}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
     ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
     ${syn ? twoStep(key, effectsOfUnit(key)) : ""}
-    ${section("Relics", relicCards(relicsOfDude(t)))}
-    ${section("Family relics", famRelics ? `<div class="chipline">${famRelics}</div>` : "")}
-    ${section("Family", grid(mates))}
+    ${section("Family", family)}
     ${section("Names", grid(out))}
     ${section("Named by", grid(inbound))}`;
 }

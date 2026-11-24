@@ -132,6 +132,9 @@ def main():
                       "stats": [[s["name"], s["text"]] for s in d.get("stats", [])],
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})
 
+    # relic priority per Dude (Dude audit, user analysis): rank 1 = first; unranked relics keep A-Z after the ranked
+    PR = json.load(open(os.path.join(X, "data", "relic_priority.json"), encoding="utf-8"))["dudes"]
+    rank = {rid: i + 1 for ids in PR.values() for i, rid in enumerate(ids)}
     relics = []
     for r in E["relics"]:
         a = r["art"]
@@ -140,6 +143,7 @@ def main():
         relics.append({"id": r["id"], "name": r["name"], "seg": r["segments"], "fx": fx(r), "fn": fn("relic:" + r["id"]),
                        "pool": r["pool"],
                        "fam": r["family"] or (GLOBAL if r["pool"] in ("universal", "promoter") else None), "dude": r["dude"],
+                       **({"pr": rank[r["id"]]} if r["id"] in rank else {}),
                        "icon": icon(a["sprite"], "relic " + r["id"], a["provenance"])})
 
     # trinkets (Trinket Stash; extract tools/trinkets_map.py): bound to one Dude Type (the Wielder) for the run
