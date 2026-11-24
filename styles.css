@@ -215,6 +215,9 @@ html.kb .adder .search { padding: 6px 10px; }
 .fxrow .vi img { width: 28px; height: 28px; display: block; }
 .fxrow .chipline { gap: 4px; }
 .fxrow.ihead { margin: 10px 0 6px; font: 15px var(--narrow); color: var(--mustard); }
+.irow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.irow .chipline { gap: 4px; }
+.irow .ifrom { font: 13px var(--narrow); color: var(--olive); }
 .btile { position: relative; min-width: 0; }
 .btile .mini { padding-right: 40px; }
 .btile .x { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 28px; height: 28px; }

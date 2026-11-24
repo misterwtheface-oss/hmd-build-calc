@@ -84,7 +84,9 @@ function pairs2(k) {
       const mid = keys[m], mx = itemOf(mid), via = ` · via ${(mx?.t ? mx.ab : mx?.name) || ""}`;   // a Dude: his ability
       const give = `${FACET[fac[pf]]} ${names[v]}${via}`, use = `${FACET.reacts} ${names[c]}${via}`;
       (P2[keys[a]] = P2[keys[a]] || []).push({ o: keys[b], mid, ch: names[c], label: give, olabel: use, give: true, two: true });
-      (P2[keys[b]] = P2[keys[b]] || []).push({ o: keys[a], mid, ch: names[c], label: use, olabel: give, give: false, two: true });
+      // the consumer side also keeps the provider's facet (src: Gives Evasion) for the Indirect synergies rows
+      (P2[keys[b]] = P2[keys[b]] || []).push({ o: keys[a], mid, ch: names[c], label: use, olabel: give, give: false, two: true,
+        src: [fac[pf], names[v]] });
     }
   }
   return P2[k] || [];
@@ -172,14 +174,25 @@ const partners = (u, kind, limit) =>
 const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "), true);
 // two-step synergies of some effects (a Dude's ability + relics, or one relic), in a closed fold: only chains that end
 // at one of these effects (they receive: Evasion -> Golden Glove -> Hit -> Probe), not the chains they start for others
-// (user 2026-11-24). Grouped under the effect they feed (icon + name), each group rarest channel first
+// (user 2026-11-24). Under each effect fed (icon + name header), one row per linking effect (Golden Glove): what it
+// triggers for him (Triggers Hit) and what sets it off (Gives Evasion); the chips open their channel pages instead of
+// listing every provider. Rarest channel first
+const midChip = (k) => { const x = itemOf(k); return `<button class="chiplink" data-open="${k}">${img(x.icon, x.name)}${esc(x.t ? x.ab : x.name)}</button>`; };
 function twoStep(id, own) {
   const groups = own.map((k) => {
-    const by = new Map();
-    for (const l of pairs2(k)) if (!l.give && !own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
-    const ls = [...by.values()].sort((a, b) => chWeight(b.ch) - chWeight(a.ch) || byName(itemOf(a.o), itemOf(b.o)));
+    const by = new Map();   // linking effect -> {ch, src: facet label -> facet}
+    for (const l of pairs2(k)) {
+      if (l.give || own.includes(l.o) || !itemOf(l.o) || !itemOf(l.mid)) continue;
+      const r = by.get(l.mid) || { mid: l.mid, ch: new Set(), src: new Map() };
+      r.ch.add(l.ch);
+      r.src.set(fxLabel(l.src), l.src);
+      by.set(l.mid, r);
+    }
+    const rows = [...by.values()].sort((a, b) => Math.max(...[...b.ch].map(chWeight)) - Math.max(...[...a.ch].map(chWeight)) || byName(itemOf(a.mid), itemOf(b.mid)));
     const x = itemOf(k);
-    return ls.length ? `<div class="fxrow ihead">${iconBtn(k)}<span>${esc(x.t ? x.ab : x.name)}</span></div>${grid(ls.map((l) => mini(itemOf(l.o), esc(l.olabel), true)))}` : "";
+    return rows.length ? `<div class="fxrow ihead">${iconBtn(k)}<span>${esc(x.t ? x.ab : x.name)}</span></div>${rows
+      .map((r) => `<div class="irow">${midChip(r.mid)}<span class="chipline">${[...r.ch].map((c) => fxChip(["emits", c])).join("")}</span>
+        <span class="ifrom">from</span><span class="chipline">${[...r.src.values()].map(fxChip).join("")}</span></div>`).join("")}` : "";
   }).join("");
   return fold("two:" + id, "Indirect synergies", groups);
 }
