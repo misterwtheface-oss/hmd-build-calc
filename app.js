@@ -131,10 +131,10 @@ function effectBars(eff, big) {
     .map(([k, v, c = k]) => `<span class="eff"${big ? ` data-open="ch:${encodeURIComponent(c)}"` : ""}><span>${esc(k)}</span><b>${v}</b>${bar(v, max)}</span>`)
     .join("")}</div>`;
 }
-// a Dude's effect edges, one bar per higher-order group of the linked channel (Damage, Crit, Defense ...), in two
-// columns: Producer (Gives / Triggers) and Consumer (Scales / On / Boosts; the chip rail side, receives()). n = how
-// many of his effects (ability + relics) touch that group on that side; under the bar, each facet in it (opens its
-// channel). Each column bars against its own largest n (rule A-magnitude-bars)
+// a Dude's effect edges, one bar per higher-order group of the linked channel (Damage, Crit, Defense ...): n = how many
+// of his effects (ability + relics) touch that group. Under the bar, two folds closed by default: Producer (Gives /
+// Triggers) and Consumer (Scales / On / Boosts; the chip rail side, receives()), each with its facet chips (open the
+// channel)
 const EDGE_GROUPS = {
   Damage: ["Attack Power", "Attack Speed", "DPS", "Damage Dealt", "Cleave", "Hit"],
   Crit: ["Crit", "Crit Chance", "Direct Crit"],
@@ -145,29 +145,25 @@ const EDGE_GROUPS = {
 };
 const EDGE_GROUP = Object.fromEntries(Object.entries(EDGE_GROUPS).flatMap(([g, cs]) => cs.map((c) => [c, g])));
 const edgeGroup = (f) => EDGE_GROUP[chOf(f[1])] || chOf(f[1]);
-function dudeEdges(t, consumer) {
+function dudeEdges(t) {
   const by = new Map();
   for (const x of [DUDE[t], ...relicsOfDude(t)]) {
     const seen = new Set();
-    for (const f of fxShown(x).filter((f) => receives(f) === consumer)) {
-      const g = edgeGroup(f), e = by.get(g) || { g, n: 0, fx: new Map() };
+    for (const f of fxShown(x)) {
+      const g = edgeGroup(f), e = by.get(g) || { g, n: 0, fx: [new Map(), new Map()] };
       if (!seen.has(g)) e.n++, seen.add(g);
-      e.fx.set(fxLabel(f), f);
+      e.fx[receives(f) ? 1 : 0].set(fxLabel(f), f);
       by.set(g, e);
     }
   }
   return [...by.values()].sort((a, b) => b.n - a.n || a.g.localeCompare(b.g));
 }
-function edgeBars(es) {
-  const max = Math.max(0, ...es.map((e) => e.n));
-  return `<div class="effects big">${es
-    .map((e) => `<div class="eff grp"><span>${esc(e.g)}</span><b>${e.n}</b>${bar(e.n, max)}<span class="chipline">${[...e.fx.values()].map(fxChip).join("")}</span></div>`)
-    .join("")}</div>`;
-}
-function edgeColumns(t) {
-  const cols = [["Producer", false], ["Consumer", true]].map(([name, c]) => [name, dudeEdges(t, c)]);
-  return cols.some(([, es]) => es.length)
-    ? `<div class="ecols">${cols.map(([name, es]) => `<div><div class="ecol">${name}</div>${edgeBars(es)}</div>`).join("")}</div>` : "";
+function edgeBars(t) {
+  const es = dudeEdges(t), max = Math.max(0, ...es.map((e) => e.n));
+  const side = (e, i, name) => `<div>${fold(`edge:${t}|${e.g}|${i}`, name, e.fx[i].size ? `<span class="chipline">${[...e.fx[i].values()].map(fxChip).join("")}</span>` : "")}</div>`;
+  return es.length ? `<div class="effects big">${es
+    .map((e) => `<div class="eff grp"><span>${esc(e.g)}</span><b>${e.n}</b>${bar(e.n, max)}<div class="ecols">${side(e, 0, "Producer")}${side(e, 1, "Consumer")}</div></div>`)
+    .join("")}</div>` : "";
 }
 
 // partner units of a unit (Dudes or standalone relics), strongest first, each with the channels that join them
@@ -729,7 +725,7 @@ function dudeView(t) {
   return `<div class="hero dhero">${img(d.icon, d.name)}<div><div class="hname"><h2>${esc(d.name)}</h2>${d.fam.map(famChip).join("")}</div>${roleRow}</div></div>
     ${statTable(d.stats, DUDE_STAT_MAX)}
     ${FEATURES.roles ? section("Effect functions", fnRows ? `<div class="role">${fnRows}</div>` : "") : ""}
-    ${syn ? fold("edges:" + t, "Effect edges", edgeColumns(t)) : ""}
+    ${syn ? section("Effect edges", edgeBars(t)) : ""}
     ${section("Intrinsic effect", d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : "")}
     ${section("Relics", relicCards(relics))}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}

@@ -208,8 +208,6 @@ html.kb .adder .search { padding: 6px 10px; }
 .tview .hold { margin-left: 6px; }
 .fxlist summary { cursor: pointer; padding: 4px 0; font: 15px var(--narrow); color: var(--olive); }
 .fxlist[open] summary { color: var(--cream); }
-.fxlist[data-fxlist^="edges:"] { margin-top: 18px; }
-.fxlist[data-fxlist^="edges:"] > summary { font: 20px var(--title); letter-spacing: .03em; color: var(--olive); }
 .bgroups + .fxlist { margin-top: 12px; }
 .bgroups + .fxlist > summary { font-size: 18px; }
 .fxrow { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
@@ -232,18 +230,18 @@ html.kb .adder .search { padding: 6px 10px; }
 .role .tags:first-child { margin-top: 0; }
 .dhero .hname { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-bottom: 6px; }
 .dhero .hname h2 { margin: 0; }
-.ecols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 4px; }
+.ecols { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 2px 0 6px; }
+.ecols summary { padding: 2px 0; font-size: 14px; }
 .ecols > div { min-width: 0; }
-.ecol { font: 13px var(--narrow); color: var(--olive); margin-bottom: 4px; }
 .ecols .chiplink { white-space: normal; text-align: left; }
 .rank { font-weight: 400; color: var(--olive); margin-right: 6px; font-variant-numeric: tabular-nums; }
-details.fxlist > summary + .ecols { margin-top: 2px; }
+
 .role .fnhead { font: 13px var(--narrow); align-self: center; }
 .tags.fn-Offense .fnhead { color: var(--brick); }
 .tags.fn-Defense .fnhead { color: var(--olive); }
 .tags.fn-Support .fnhead { color: var(--teal); }
 .tags.fn-Utility .fnhead { color: var(--mustard); }
-.eff.grp .chipline { grid-column: 1 / -1; gap: 4px; margin: 4px 0 6px; font-size: 13px; }
+.eff.grp .chipline { gap: 4px; margin: 2px 0 4px; font-size: 13px; }
 .effects.big .eff.grp { cursor: default; }
 .tag { font: 13px var(--narrow); padding: 1px 8px; border-radius: 999px; background: var(--sage); color: var(--cream); }
 .prose { color: var(--olive); margin: 6px 0; }
