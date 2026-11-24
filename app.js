@@ -746,6 +746,8 @@ function dudeView(t) {
     ${syn ? section("Effect edges", edgeBars(t)) : ""}
     ${section("Intrinsic effect", d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : "")}
     ${section("Relics", relicCards(relics))}
+    ${section("Top trinkets", grid((d.picks?.tr || []).map((id, i) => mini(TRINKET[id], "#" + (i + 1)))))}
+    ${section("Top food", grid((d.picks?.fd || []).map((id, i) => mini(FOOD[id], "#" + (i + 1)))))}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
     ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
     ${syn ? twoStep(key, effectsOfUnit(key)) : ""}

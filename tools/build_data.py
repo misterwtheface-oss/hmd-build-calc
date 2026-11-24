@@ -132,6 +132,19 @@ def main():
                       "stats": [[s["name"], s["text"]] for s in d.get("stats", [])],
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})
 
+    # top held picks per Dude (extract data/held_picks.json): 4 trinkets + 4 food, first = best; ids must exist
+    HP = json.load(open(os.path.join(X, "data", "held_picks.json"), encoding="utf-8"))["dudes"]
+    tids = {t["id"] for t in E.get("trinkets", [])}
+    fids = {m["id"] for m in E.get("food", [])}
+    for d in dudes:
+        p = HP.get(d["t"])
+        if not p:
+            continue
+        bad = [i for i in p["trinkets"] if i not in tids] + [i for i in p["food"] if i not in fids]
+        if bad:
+            warnings.append("held picks for %s name unknown ids %s" % (d["t"], bad))
+        d["picks"] = {"tr": [i for i in p["trinkets"] if i in tids], "fd": [i for i in p["food"] if i in fids]}
+
     # relic priority per Dude (Dude audit, user analysis): rank 1 = first; unranked relics keep A-Z after the ranked
     PR = json.load(open(os.path.join(X, "data", "relic_priority.json"), encoding="utf-8"))["dudes"]
     rank = {rid: i + 1 for ids in PR.values() for i, rid in enumerate(ids)}

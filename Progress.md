@@ -136,8 +136,13 @@
   Grouped under the own effect each chain feeds (icon + ability / relic name header), in his kit order; one row per
   linking effect: [Golden Glove] Triggers Hit from Gives Evasion, the chips open the channel pages instead of
   listing every provider (user). Alien 51 rows -> 4.
+- 2026-11-24 (4): Dude page: Top trinkets and Top food sections after Relics, 4 each with #1-#4, from the extract's
+  data/held_picks.json -> dude picks {tr, fd} (build_data warns on an unknown id). DRAFT: Claude's broad pass for 50
+  Dudes (no Echo / Skeledude / Streaker) from ability + relics + base stats, a why line per Dude in the file; main
+  dishes only (no extra-stat pick yet). User refines.
 
 ## Open
+- [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Decode the game's relic offer draw (relics_get_available_ids / relic_chooser_reroll; first decompile came out as
   fragments) and replace the uniform-draw assumption in the Draft weighting.
