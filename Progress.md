@@ -149,6 +149,9 @@
   the knocked-out count Shovel / Organ Bucket read skips summons (dude_knock_out, roster_refresh_num_unconscious_dudes).
 - 2026-11-24 (6): Trinket and food pages: Recommended on section (one shared pickedBy), the Dudes whose top 4 hold it,
   one row per placement #1-#4 (empty placements skipped); for the user's per-trinket review before the upper bound.
+- 2026-11-24 (7): Distance Traveled synergy channel (user): the six "X feet he travels" effects scale with it, fed by
+  Run Speed and every Dash (Tractor Beam, Lasso, Blitz too); code: position delta per step, so Dashes count (extract
+  docs/effect_tagging.md). 155 links. Held picks: ADHD #1 for Electrician (Fuzzy Socks: Dash + Run Speed twice).
 
 ## Open
 - [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
