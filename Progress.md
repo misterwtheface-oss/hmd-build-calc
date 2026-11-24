@@ -133,6 +133,7 @@
 - 2026-11-24 (3): Indirect synergies list only chains that end at the page's own effects (what boosts him:
   Evasion -> Golden Glove -> Hit -> Probe), not the chains he starts for others (user). All pages (Dude, relic,
   trinket, food). Alien 319 -> 51 rows; all Dudes 6615 -> 3241; 20 Dudes have none.
+  Grouped under the own effect each chain feeds (icon + ability / relic name header), in his kit order.
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).

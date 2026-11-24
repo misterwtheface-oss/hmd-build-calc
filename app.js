@@ -170,15 +170,18 @@ function edgeBars(t) {
 const partners = (u, kind, limit) =>
   (SYN[u] || []).filter((p) => p.u.startsWith(kind + ":")).slice(0, limit);
 const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "), true);
-// two-step synergies of some effects (a Dude's ability + relics, or one relic), in a closed fold: each other effect,
-// what it does and through which effect, rarest channel first. Only chains that end at one of these effects (they
-// receive: Evasion -> Golden Glove -> Hit -> Probe), not the chains they start for others (user 2026-11-24)
+// two-step synergies of some effects (a Dude's ability + relics, or one relic), in a closed fold: only chains that end
+// at one of these effects (they receive: Evasion -> Golden Glove -> Hit -> Probe), not the chains they start for others
+// (user 2026-11-24). Grouped under the effect they feed (icon + name), each group rarest channel first
 function twoStep(id, own) {
-  const by = new Map();
-  for (const k of own) for (const l of pairs2(k))
-    if (!l.give && !own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
-  const ls = [...by.values()].sort((a, b) => chWeight(b.ch) - chWeight(a.ch) || byName(itemOf(a.o), itemOf(b.o)));
-  return fold("two:" + id, "Indirect synergies", grid(ls.map((l) => mini(itemOf(l.o), esc(l.olabel), true))));
+  const groups = own.map((k) => {
+    const by = new Map();
+    for (const l of pairs2(k)) if (!l.give && !own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
+    const ls = [...by.values()].sort((a, b) => chWeight(b.ch) - chWeight(a.ch) || byName(itemOf(a.o), itemOf(b.o)));
+    const x = itemOf(k);
+    return ls.length ? `<div class="fxrow ihead">${iconBtn(k)}<span>${esc(x.t ? x.ab : x.name)}</span></div>${grid(ls.map((l) => mini(itemOf(l.o), esc(l.olabel), true)))}` : "";
+  }).join("");
+  return fold("two:" + id, "Indirect synergies", groups);
 }
 
 /* ---------- art + chips (all game art goes through these) ---------- */
