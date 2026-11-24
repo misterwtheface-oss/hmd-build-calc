@@ -124,6 +124,12 @@
   EDGE_GROUPS in app.js) by how many of his ability + relics touch each, with that group's facet chips under the bar
   (tap opens the channel): 540 -> 180 bars over 53 Dudes, bars at 1: 427 -> 45. Role: / Function: labels before chips.
   Function rows: one per primary Function, its name once ("Support:") then each Focus chip with ×n.
+- 2026-11-24 (2): Dude page reorder (user): hero = icon | name + Family chip / Role: chips; stats; Effect functions
+  (one row per Function); Effect edges: each group bar (n = effects touching it) has two folds under it, closed by
+  default, side by side: Producer (Gives / Triggers) and Consumer (Scales / On / Boosts) chips; Intrinsic effect;
+  Relics; Synergy Dudes / relics; Indirect synergies; Family (chip + its Dudes); Names / Named by kept at the end.
+  Relic priority: the user's order per Dude from the audit, _hmd_extract/data/relic_priority.json -> relic pr ->
+  relics sorted with #n on the card; empty so far (Agent, Alien to backfill).
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
