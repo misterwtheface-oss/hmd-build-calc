@@ -153,7 +153,10 @@
   Run Speed and every Dash (Tractor Beam, Lasso, Blitz too); code: position delta per step, so Dashes count (extract
   docs/effect_tagging.md). 155 links. Held picks: ADHD #1 for Electrician (Fuzzy Socks: Dash + Run Speed twice).
 - 2026-11-24 (8): Run Speed dropped as a Distance Traveled provider (user: it does not add distance travelled; Dash
-  does). Channel now Dash only: 48 links.
+  does). Channel now Dash only: 48 links. Fuzzy Socks keeps its own Run Speed link, so ADHD still pays twice (user).
+- 2026-11-24 (9): Teleport and Thrown added as Distance Traveled sources from code: teleports count in full (38 links);
+  a throw stuns at launch, so it counts for River Raft, Wave Function, Cutoff Jorts and Taser but not Fuzzy Socks or
+  Spell Book, and Ground Wire / Mag Boots clear the stun only on landing (4 links: Electrician's own throws). 90 links.
 
 ## Open
 - [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
