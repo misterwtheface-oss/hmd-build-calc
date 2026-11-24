@@ -140,6 +140,13 @@
   data/held_picks.json -> dude picks {tr, fd} (build_data warns on an unknown id). DRAFT: Claude's broad pass for 50
   Dudes (no Echo / Skeledude / Streaker) from ability + relics + base stats, a why line per Dude in the file; main
   dishes only (no extra-stat pick yet). User refines.
+- 2026-11-24 (5): held picks rules (user): purpose = weight trinket offers toward a present Dude (5 Dudes, one
+  trinket each, limited rerolls; the offer still weighs every other relic). Every trinket in at least 2 Dudes' top 4
+  (lower bound, met: 32/32); upper bound to be set. Method: per Dude vs all trinkets, then per trinket vs all Dudes.
+  Rulings: Baseball Bat = a Direct Crit every 3s, on every On Hit / On Crit kit (28 lists); Shovel = Zombie +
+  Frankendude (Lich dropped); Fedora = Max HP + Attack Power payoffs with no relic needing copies (Manager,
+  Construction, Druid; more candidates in the screen). Code: Fedora walks Roster order, which skips summon types;
+  the knocked-out count Shovel / Organ Bucket read skips summons (dude_knock_out, roster_refresh_num_unconscious_dudes).
 
 ## Open
 - [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
