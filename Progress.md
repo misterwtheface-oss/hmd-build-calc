@@ -119,6 +119,10 @@
 - 2026-11-23 (Dude audit, Alien Dude): Dissection Kit = Support / Heal; new edge Prevent Knock Out (Bulletproof Suit,
   Dissection Kit: a full heal inside a Fatal Damage hook) links to every On Fatal Damage effect (+68 links); Beam
   Splitter shield and Dissection Kit heal go to other Dudes, never Alien (code scope fixes).
+- 2026-11-24: Dude page base stats carry a bar each (share of that stat's largest value among all Dudes; Draft
+  team-view totals stay bare). Effect edges bar higher-order groups (Damage, Crit, Defense, Health, Mobility, Summons:
+  EDGE_GROUPS in app.js) by how many of his ability + relics touch each, with that group's facet chips under the bar
+  (tap opens the channel): 540 -> 180 bars over 53 Dudes, bars at 1: 427 -> 45. Role: / Function: labels before chips.
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).

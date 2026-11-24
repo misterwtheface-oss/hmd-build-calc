@@ -226,6 +226,11 @@ html.kb .adder .search { padding: 6px 10px; }
 .chiplink.kw { color: var(--teal); }
 .role { margin: 4px 0 8px; }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.role .lbl { font: 13px var(--narrow); color: var(--olive); flex: 0 0 auto; min-width: 64px; }
+.role .fns { display: flex; gap: 6px; align-items: baseline; margin-top: 6px; }
+.role .fns .tags:first-child { margin-top: 0; }
+.eff.grp .chipline { grid-column: 1 / -1; gap: 4px; margin: 4px 0 6px; font-size: 13px; }
+.effects.big .eff.grp { cursor: default; }
 .tag { font: 13px var(--narrow); padding: 1px 8px; border-radius: 999px; background: var(--sage); color: var(--cream); }
 .prose { color: var(--olive); margin: 6px 0; }
 .empty { color: var(--olive); padding: 16px 4px; }
@@ -254,6 +259,9 @@ table.stats { width: 100%; border-collapse: collapse; font: 14px var(--narrow); 
 table.stats th { text-align: left; color: var(--olive); font-weight: normal; padding: 4px 6px; border-bottom: 1px solid var(--line); }
 table.stats td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
 table.stats .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.stats td.sbar { width: 45%; }
+table.stats .bar { display: block; height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
+table.stats .bar i { display: block; height: 100%; background: var(--teal); border-radius: 3px; }
 table.stats .chiplink img { width: 20px; height: 20px; }
 .wsec { margin: 4px 0 4px 14px; padding-left: 10px; border-left: 2px solid var(--line); }
 .wsec .fchip { font-variant-numeric: tabular-nums; }

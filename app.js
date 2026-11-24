@@ -131,17 +131,36 @@ function effectBars(eff, big) {
     .map(([k, v, c = k]) => `<span class="eff"${big ? ` data-open="ch:${encodeURIComponent(c)}"` : ""}><span>${esc(k)}</span><b>${v}</b>${bar(v, max)}</span>`)
     .join("")}</div>`;
 }
-// a Dude's effect edges: each facet (Gives / Scales / Triggers / On / Boosts + channel) of his ability + relics,
-// n = how many of those effects carry it
+// a Dude's effect edges, one bar per higher-order group of the linked channel (Damage, Crit, Defense ...): n = how many
+// of his effects (ability + relics) touch that group; under the bar, each facet in it (opens its channel)
+const EDGE_GROUPS = {
+  Damage: ["Attack Power", "Attack Speed", "DPS", "Damage Dealt", "Cleave", "Hit"],
+  Crit: ["Crit", "Crit Chance", "Direct Crit"],
+  Defense: ["Block", "Deflect", "Evade", "Enemy Miss", "Taunt"],
+  Health: ["HP", "Max HP", "Healing", "Lifesteal", "Regeneration Tick", "Temporary Health", "Fatal Damage", "Knock Out"],
+  Mobility: ["Run Speed", "Dash", "Thrown"],
+  Summons: ["Summon", "Skeledude"],
+};
+const EDGE_GROUP = Object.fromEntries(Object.entries(EDGE_GROUPS).flatMap(([g, cs]) => cs.map((c) => [c, g])));
+const edgeGroup = (f) => EDGE_GROUP[chOf(f[1])] || chOf(f[1]);
 function dudeEdges(t) {
-  const count = new Map();
-  for (const x of [DUDE[t], ...relicsOfDude(t)])
-    for (const f of new Map(fxShown(x).map((f) => [fxLabel(f), f])).values()) {
-      const e = count.get(fxLabel(f)) || [fxLabel(f), 0, chOf(f[1])];
-      e[1]++;
-      count.set(e[0], e);
+  const by = new Map();
+  for (const x of [DUDE[t], ...relicsOfDude(t)]) {
+    const seen = new Set();
+    for (const f of fxShown(x)) {
+      const g = edgeGroup(f), e = by.get(g) || { g, n: 0, fx: new Map() };
+      if (!seen.has(g)) e.n++, seen.add(g);
+      e.fx.set(fxLabel(f), f);
+      by.set(g, e);
     }
-  return [...count.values()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+  return [...by.values()].sort((a, b) => b.n - a.n || a.g.localeCompare(b.g));
+}
+function edgeBars(es) {
+  const max = Math.max(0, ...es.map((e) => e.n));
+  return `<div class="effects big">${es
+    .map((e) => `<div class="eff grp"><span>${esc(e.g)}</span><b>${e.n}</b>${bar(e.n, max)}<span class="chipline">${[...e.fx.values()].map(fxChip).join("")}</span></div>`)
+    .join("")}</div>`;
 }
 
 // partner units of a unit (Dudes or standalone relics), strongest first, each with the channels that join them
@@ -208,7 +227,10 @@ function renderSegs(seg) {
 }
 const section = (title, body) => (body ? `<h3>${esc(title)}</h3>${body}` : "");
 // a Dude's base stats or an Enemy's stats, [name, text] in the game's own format
-const statTable = (stats) => (stats.length ? `<table class="stats">${stats.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${esc(v)}</td></tr>`).join("")}</table>` : "");
+// a stat table; with max (a Dude's page) each row carries a bar: its share of that stat's largest value among all Dudes
+const statTable = (stats, max) => (stats.length ? `<table class="stats">${stats.map(([n, v]) => `<tr><td>${esc(n)}</td>${max ? `<td class="sbar">${bar(parseFloat(v) || 0, max[n])}</td>` : ""}<td class="num">${esc(v)}</td></tr>`).join("")}</table>` : "");
+const DUDE_STAT_MAX = {};
+for (const d of H.dudes) for (const [n, v] of d.stats) DUDE_STAT_MAX[n] = Math.max(DUDE_STAT_MAX[n] || 0, parseFloat(v) || 0);
 const grid = (items) => (items.length ? `<div class="grid">${items.join("")}</div>` : "");
 
 /* ---------- tabs ---------- */
@@ -686,7 +708,7 @@ function dudeView(t) {
     .map((f) => `<div class="tags">${fns.filter((x) => x.fn[0] === f).map((x) => fnTag(x, fnN(x))).join("")}</div>`)
     .join("");
   const role = FEATURES.roles && (d.roles.length || fns.length)
-    ? `<div class="role">${d.roles.length ? `<div class="meta">${roleBadge(d)}</div>` : ""}${fnRows}</div>`
+    ? `<div class="role">${d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : ""}${fnRows ? `<div class="fns"><span class="lbl">Function:</span><div>${fnRows}</div></div>` : ""}</div>`
     : "";
   const famRelics = d.fam.map((f) => famChip(f)).join("");
   const mates = d.fam.flatMap((f) => membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)));
@@ -698,10 +720,10 @@ function dudeView(t) {
     .map((x) => mini(x, x.id ? esc(poolLabel(x)) : ""));
   const syn = FEATURES.synergy;
   return `<div class="hero">${img(d.icon, d.name)}<div><h2>${esc(d.name)}</h2><div class="meta">${d.fam.map(famChip).join("")}</div></div></div>
-    ${statTable(d.stats)}
+    ${statTable(d.stats, DUDE_STAT_MAX)}
     ${role}
     ${d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : ""}
-    ${syn ? section("Effect edges", dudeEdges(t).length ? effectBars(dudeEdges(t), true) : "") : ""}
+    ${syn ? section("Effect edges", dudeEdges(t).length ? edgeBars(dudeEdges(t)) : "") : ""}
     ${syn ? section("Synergy Dudes", grid(partners(key, "dude", 12).map(partnerMini))) : ""}
     ${syn ? section("Synergy relics", grid(partners(key, "relic", 8).map(partnerMini))) : ""}
     ${syn ? twoStep(key, effectsOfUnit(key)) : ""}
