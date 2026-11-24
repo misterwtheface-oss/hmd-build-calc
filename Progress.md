@@ -123,6 +123,7 @@
   team-view totals stay bare). Effect edges bar higher-order groups (Damage, Crit, Defense, Health, Mobility, Summons:
   EDGE_GROUPS in app.js) by how many of his ability + relics touch each, with that group's facet chips under the bar
   (tap opens the channel): 540 -> 180 bars over 53 Dudes, bars at 1: 427 -> 45. Role: / Function: labels before chips.
+  Function rows: one per primary Function, its name once ("Support:") then each Focus chip with ×n.
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).

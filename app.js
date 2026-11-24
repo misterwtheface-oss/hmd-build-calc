@@ -699,13 +699,15 @@ function dudeView(t) {
   const d = DUDE[t];
   if (!d) return null;
   const key = "dude:" + t;
-  // Role (game) badges alone; below, every Function / Focus of his ability + relics together, one row per Function
+  // Role (game) badges alone; below, every Function / Focus of his ability + relics together, one row per Function:
+  // its name once, then each Focus
   // ×n = how many of his effects (ability + relics) carry that Function / Focus
   const kit = [d, ...relicsOfDude(t)].filter((x) => x.fn);
   const fnN = (x) => kit.filter((y) => fnText(y) === fnText(x)).length;
   const fns = [...new Map(kit.map((x) => [fnText(x), x])).values()].sort((a, b) => fnRank(a) - fnRank(b));
   const fnRows = [...new Set(fns.map((x) => x.fn[0]))]
-    .map((f) => `<div class="tags">${fns.filter((x) => x.fn[0] === f).map((x) => fnTag(x, fnN(x))).join("")}</div>`)
+    .map((f) => `<div class="tags fn-${f}"><span class="fnhead">${esc(f)}:</span>${fns.filter((x) => x.fn[0] === f)
+      .map((x) => `<span class="tag fn fn-${f}">${esc(x.fn[1] || f)}<b>×${fnN(x)}</b></span>`).join("")}</div>`)
     .join("");
   const role = FEATURES.roles && (d.roles.length || fns.length)
     ? `<div class="role">${d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : ""}${fnRows ? `<div class="fns"><span class="lbl">Function:</span><div>${fnRows}</div></div>` : ""}</div>`

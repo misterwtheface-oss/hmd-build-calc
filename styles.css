@@ -229,6 +229,11 @@ html.kb .adder .search { padding: 6px 10px; }
 .role .lbl { font: 13px var(--narrow); color: var(--olive); flex: 0 0 auto; min-width: 64px; }
 .role .fns { display: flex; gap: 6px; align-items: baseline; margin-top: 6px; }
 .role .fns .tags:first-child { margin-top: 0; }
+.role .fnhead { font: 13px var(--narrow); align-self: center; }
+.tags.fn-Offense .fnhead { color: var(--brick); }
+.tags.fn-Defense .fnhead { color: var(--olive); }
+.tags.fn-Support .fnhead { color: var(--teal); }
+.tags.fn-Utility .fnhead { color: var(--mustard); }
 .eff.grp .chipline { grid-column: 1 / -1; gap: 4px; margin: 4px 0 6px; font-size: 13px; }
 .effects.big .eff.grp { cursor: default; }
 .tag { font: 13px var(--narrow); padding: 1px 8px; border-radius: 999px; background: var(--sage); color: var(--cream); }
