@@ -152,6 +152,8 @@
 - 2026-11-24 (7): Distance Traveled synergy channel (user): the six "X feet he travels" effects scale with it, fed by
   Run Speed and every Dash (Tractor Beam, Lasso, Blitz too); code: position delta per step, so Dashes count (extract
   docs/effect_tagging.md). 155 links. Held picks: ADHD #1 for Electrician (Fuzzy Socks: Dash + Run Speed twice).
+- 2026-11-24 (8): Run Speed dropped as a Distance Traveled provider (user: it does not add distance travelled; Dash
+  does). Channel now Dash only: 48 links.
 
 ## Open
 - [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
