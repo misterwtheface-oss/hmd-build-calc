@@ -130,6 +130,9 @@
   Relics; Synergy Dudes / relics; Indirect synergies; Family (chip + its Dudes); Names / Named by kept at the end.
   Relic priority: the user's order per Dude from the audit, _hmd_extract/data/relic_priority.json -> relic pr ->
   relics sorted with #n on the card; empty so far (Agent, Alien to backfill).
+- 2026-11-24 (3): Indirect synergies list only chains that end at the page's own effects (what boosts him:
+  Evasion -> Golden Glove -> Hit -> Probe), not the chains he starts for others (user). All pages (Dude, relic,
+  trinket, food). Alien 319 -> 51 rows; all Dudes 6615 -> 3241; 20 Dudes have none.
 
 ## Open
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).

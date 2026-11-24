@@ -171,10 +171,12 @@ const partners = (u, kind, limit) =>
   (SYN[u] || []).filter((p) => p.u.startsWith(kind + ":")).slice(0, limit);
 const partnerMini = (p) => mini(unitItem(p.u), p.chs.slice(0, 3).map(esc).join(" · "), true);
 // two-step synergies of some effects (a Dude's ability + relics, or one relic), in a closed fold: each other effect,
-// what it does and through which effect, rarest channel first
+// what it does and through which effect, rarest channel first. Only chains that end at one of these effects (they
+// receive: Evasion -> Golden Glove -> Hit -> Probe), not the chains they start for others (user 2026-11-24)
 function twoStep(id, own) {
   const by = new Map();
-  for (const k of own) for (const l of pairs2(k)) if (!own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
+  for (const k of own) for (const l of pairs2(k))
+    if (!l.give && !own.includes(l.o) && itemOf(l.o)) by.set(`${l.o}|${l.olabel}`, l);
   const ls = [...by.values()].sort((a, b) => chWeight(b.ch) - chWeight(a.ch) || byName(itemOf(a.o), itemOf(b.o)));
   return fold("two:" + id, "Indirect synergies", grid(ls.map((l) => mini(itemOf(l.o), esc(l.olabel), true))));
 }
