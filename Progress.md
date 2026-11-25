@@ -157,9 +157,15 @@
 - 2026-11-24 (9): Teleport and Thrown added as Distance Traveled sources from code: teleports count in full (38 links);
   a throw stuns at launch, so it counts for River Raft, Wave Function, Cutoff Jorts and Taser but not Fuzzy Socks or
   Spell Book, and Ground Wire / Mag Boots clear the stun only on landing (4 links: Electrician's own throws). 90 links.
+- 2026-11-24 (10): Top trinkets / Recommended on now come from a function (user: code-backed, never a hand list):
+  extract tools/held_picks.py --assign --write. Score = the Draft's log weighting over wield links (ability link 1,
+  relic link = pool odds), each Dude's top 4, every trinket on 2-10 Dudes (upper bound "for now"); summons
+  (DudeType.temporary) get none. Soccer Dude's Shot tagged as Direct Damage from code (links him to On Hit effects).
+  Food picks still the draft list.
 
 ## Open
-- [ ] User refines the held picks draft (held_picks.json, status "draft" per Dude -> "user" when reviewed).
+- [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
+  Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Decode the game's relic offer draw (relics_get_available_ids / relic_chooser_reroll; first decompile came out as
   fragments) and replace the uniform-draw assumption in the Draft weighting.
