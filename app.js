@@ -144,7 +144,7 @@ function effectBars(eff, big) {
 // Triggers) and Consumer (Scales / On / Boosts; the chip rail side, receives()), each with its facet chips (open the
 // channel)
 const EDGE_GROUPS = {
-  Damage: ["Attack Power", "Attack Speed", "DPS", "Damage Dealt", "Cleave", "Hit"],
+  Damage: ["Attack Power", "Attack Speed", "DPS", "Damage Dealt", "Direct Damage Dealt", "Cleave", "Hit"],
   Crit: ["Crit", "Crit Chance", "Direct Crit"],
   Defense: ["Block", "Deflect", "Evade", "Enemy Miss", "Taunt"],
   Health: ["HP", "Max HP", "Healing", "Lifesteal", "Regeneration Tick", "Temporary Health", "Fatal Damage", "Knock Out"],
