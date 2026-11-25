@@ -60,15 +60,19 @@ const FACET = { gives: "Gives", scales: "Scales", emits: "Triggers", reacts: "On
 const fxShown = (x) => x.fx.filter(fxLive);
 // effect-level pairs (build_data.py): effect key -> [{o: other effect, ch, label: this side's facet, olabel: the other's,
 // give: this side provides the channel, so the other side (its consumer) receives it; wield: a trinket link that
-// holds only when the trinket is bound to that Dude}]
-const PAIR = {};
+// holds only when the trinket is bound to that Dude; g / og: the gates of this side's facet / the other's}]
+// GATE: effect key -> gate channel -> the effects that open it (extract effect_tags gate_src, user 2026-11-24): a
+// facet in a "When X, ..." sentence only happens when X does, so its pairs weigh the odds that X is in the build
+const PAIR = {}, GATE = {};
 {
-  const { keys, names, fac, p } = H.pairs;
-  for (const [a, b, c, v, pf, cf, w] of p) {
+  const { keys, names, fac, p, gsrc = [] } = H.pairs;
+  for (const [a, b, c, v, pf, cf, w, pg = [], cg = []] of p) {
     const give = `${FACET[fac[pf]]} ${names[v]}`, use = `${FACET[fac[cf]]} ${names[c]}`, wield = !!w;
-    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use, give: true, wield });
-    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false, wield });
+    const g1 = pg.map((i) => names[i]), g2 = cg.map((i) => names[i]);
+    (PAIR[keys[a]] = PAIR[keys[a]] || []).push({ o: keys[b], ch: names[c], label: give, olabel: use, give: true, wield, g: g1, og: g2 });
+    (PAIR[keys[b]] = PAIR[keys[b]] || []).push({ o: keys[a], ch: names[c], label: use, olabel: give, give: false, wield, g: g2, og: g1 });
   }
+  for (const [e, g, xs] of gsrc) (GATE[keys[e]] = GATE[keys[e]] || {})[names[g]] = xs.map((i) => keys[i]);
 }
 // two-step pairs (build_data.py p2): effect key -> [{o, mid: the middle effect, ch, label, olabel, give, two}]. The
 // provider feeds what triggers mid, mid makes ch happen, the consumer reacts to it (Cleave -> GET DOWN! -> Dash ->
@@ -412,16 +416,18 @@ function bind(kind, t, id, sec) {
 }
 const unbind = (kind, t) => delete HELD[kind].map()[t];
 const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) => f !== "global" && FAM[f]);
-// Draft weighting (script flag; tools/weight_preview.js compares the modes on simulated drafts; user pick 2026-11-23:
-// log, seen 25). "flat": a row scores each channel's rarity once, however many pairs it holds (2026-11-18). "linear" /
-// "log" (gradual: log2(1 + w)) / "sqrt" (inflates pool odds, undoes dilution): each synergy pair weighs by
+// Draft weighting (script flag; tools/weight_preview.js compares the modes on simulated drafts; user pick 2026-11-24:
+// grow, seen 25, rare 2: a build's overlaps should gain value as its focus forms, the Venn centre; rare 2 keeps that
+// focus off generic stats, which have the most overlaps. Was log, seen 25 on 2026-11-23). "flat": a row scores each channel's rarity once, however many pairs it holds (2026-11-18). "linear" /
+// "log" (gradual: log2(1 + w)) / "sqrt" (inflates pool odds, undoes dilution) / "grow" (w^1.5: each overlap on a
+// channel adds more than the last; an untaken relic alone counts below its odds): each synergy pair weighs by
 // how sure its two effects are to be in the build: taken (a Dude's ability, a picked relic, a held item, the offer
 // itself) = 1, a relic still in the pool = seen / pool size; a row's channel scores rarity x f(its pair weights), so
 // a channel the build has invested in grows. Pool = universal + each Family with a member + each drafted Dude's
 // relics, drawn uniformly (assumed; the game's draw rule isn't decoded): a Dude offer that grows it dilutes the odds
 // of the build's own pool relics, scored as a minus.
-const WEIGHT = { mode: "log", seen: 25, rare: 1 };   // rare: exponent on channel rarity in offer scores (1 = as is)
-const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w) };
+const WEIGHT = { mode: "grow", seen: 25, rare: 2 };   // rare: exponent on channel rarity in offer scores (1 = as is)
+const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** 1.5 };
 const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
   + types.reduce((a, t) => a + relicsOfDude(t).length, 0);
 const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
@@ -472,7 +478,11 @@ function overlap(x, build, sec) {
   const taken = (t) => offered && HELD[x.pool].get(t);
   // a two-step pair's middle effect must be in the build or the offer, and weighs its own odds
   const hasMid = (m) => owner.has(m) || newFx.includes(m);
-  const lw = (l, a, n = n1) => pw(a, l.o, n) * (l.two ? av(l.mid, n) : 1);
+  // a gated facet weighs the odds its gates are open: per gate, the summed weights of the build's effects that open
+  // it (the offer's too, unless scoring the build without it), capped at 1; several gates in one sentence multiply
+  const gate = (e, gs = [], n, off) => gs.reduce((a, g) => a * Math.min(1, (GATE[e]?.[g] || [])
+    .filter((x) => x !== e && (owner.has(x) || (off && newFx.includes(x)))).reduce((t, x) => t + av(x, n), 0)), 1);
+  const lw = (l, a, n = n1, off = true) => pw(a, l.o, n) * (l.two ? av(l.mid, n) : 1) * gate(a, l.g, n, off) * gate(l.o, l.og, n, off);
   for (const s of newFx)
     for (const l of pairsOf(s, hasMid)) {
       const h = owner.get(l.o);
@@ -506,7 +516,7 @@ function overlap(x, build, sec) {
       for (const [e, h] of owner)
         for (const l of pairsOf(e, (m) => owner.has(m))) {
           const o = owner.get(l.o);
-          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, chKey(l), e, l.label, l.o, l.olabel, lw(l, e, n));
+          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, chKey(l), e, l.label, l.o, l.olabel, lw(l, e, n, false));
         }
       return scoreRows(rows, mag, WEIGHT.rare).reduce((a, r) => a + r.score, 0);
     };

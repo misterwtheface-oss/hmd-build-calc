@@ -165,6 +165,15 @@
 - 2026-11-24 (11): Back keeps your place: a page reached by Back (or the phone's back) returns to where you left it
   scrolled (Dude page -> linked trinket -> Back lands at the same spot); a newly opened page starts at the top. The
   scroll is stored on the history entry (app.js open() / route()).
+- 2026-11-24 (12): Draft weighting = grow, rare 2 (user: overlaps should gain value as the build's focus forms, the
+  Venn centre). A channel scores rarity^2 x (summed pair weights)^1.5, so each overlap adds more than the last;
+  rarity^2 keeps the focus off generic stats, which have the most overlaps. Gated effects (user): a facet in a
+  sentence that opens with a condition ("When X, ...") weighs the odds X is open: per gate, the summed weights of the
+  build's effects that open it, capped at 1 (extract effect_tags gates / gate_src, AMBIENT = Hit, Hit Taken, Fatal
+  Damage, Knock Out always open; a gate the effect opens itself counts open). Simulated drafts (200, gate-aware
+  measure): Families 4.9 -> 4.0, top-3 channel share 68% -> 70%, builds led by Attack Power / DPS / Damage Dealt
+  22% -> 8%. Trinket picks regenerated with the same formula (extract tools/held_picks.py reads mode, rare, grow from
+  app.js).
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's

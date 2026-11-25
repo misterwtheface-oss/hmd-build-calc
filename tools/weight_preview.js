@@ -16,18 +16,17 @@ const ctx = { window: {}, console, localStorage: { getItem: (k) => store[k] ?? n
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(APP, "data.js"), "utf8"), ctx);
 const app = fs.readFileSync(path.join(APP, "app.js"), "utf8").replace('"use strict";', "");
-vm.runInContext(app + "\n;globalThis.__app = { H, WEIGHT, overlap, itemOf, keyOf, PAIR, CH, unitOf, relicsOfDude, relicsOfFamilyPool, relicsOfSource, buildFams, DUDE };", ctx);
+vm.runInContext(app + "\n;globalThis.__app = { H, WEIGHT, overlap, itemOf, keyOf, PAIR, GATE, CH, unitOf, relicsOfDude, relicsOfFamilyPool, relicsOfSource, buildFams, DUDE };", ctx);
 const A = ctx.__app;
 
 const RUNS = +process.argv[2] || 200, DUDE_OFFERS = 10, RELIC_OFFERS = 14;
 const VARIANTS = [
-  { name: "Current (flat)", mode: "flat", seen: 15 },
-  { name: "Linear, seen 40", mode: "linear", seen: 40 },
-  { name: "Sqrt, seen 15", mode: "sqrt", seen: 15 },
-  { name: "Sqrt, seen 40", mode: "sqrt", seen: 40 },
-  { name: "Log, seen 15", mode: "log", seen: 15 },
-  { name: "Log, seen 25 (live, user pick 2026-11-23)", mode: "log", seen: 25 },
-  { name: "Log, seen 40", mode: "log", seen: 40 },
+  { name: "Log, seen 25 (user pick 2026-11-23)", mode: "log", seen: 25 },
+  { name: "Linear, seen 25", mode: "linear", seen: 25 },
+  { name: "Grow w^1.5, rarity x1", mode: "grow", seen: 25, rare: 1 },
+  { name: "Grow w^1.5, rarity ^1.5", mode: "grow", seen: 25, rare: 1.5 },
+  { name: "Grow w^1.5, rarity ^2 (live, user pick 2026-11-24)", mode: "grow", seen: 25, rare: 2 },
+  { name: "Grow w^1.5, rarity ^2.5", mode: "grow", seen: 25, rare: 2.5 },
 ];
 const rng = (seed) => () => ((seed = (seed + 0x6d2b79f5) | 0), (((seed ^ (seed >>> 15)) * (1 | seed)) >>> 0) / 4294967296);
 const dudes = A.H.dudes.filter((d) => d.name).map((d) => "dude:" + d.t);
@@ -63,6 +62,8 @@ function measure(build) {
   for (const e of have)
     for (const l of A.PAIR[e] || []) {
       if (l.give || !have.has(l.o) || A.unitOf(A.itemOf(e)) === A.unitOf(A.itemOf(l.o))) continue;
+      // a gated facet counts only if the build holds something that opens each of its gates
+      if (![[e, l.g], [l.o, l.og]].every(([x, gs]) => (gs || []).every((g) => (A.GATE[x]?.[g] || []).some((s) => s !== x && have.has(s))))) continue;
       const w = (A.CH[l.ch]?.r || 0) * n[e] * n[l.o];
       mass += w; chMass[l.ch] = (chMass[l.ch] || 0) + w;
       live.add(e); live.add(l.o);
