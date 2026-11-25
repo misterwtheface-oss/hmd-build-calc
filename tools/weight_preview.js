@@ -4,7 +4,7 @@
   universal + each Family with a member + each drafted Dude's relics, relics not yet taken); every variant always
   takes its highest-scored option. Same seeds for every variant. Reports what the finished builds look like, plus
   one mid-run snapshot of how each variant ranks every option.
-  Usage: node tools/weight_preview.js [runs=200] [> report.md]
+  Usage: node tools/weight_preview.js [runs=200] [> report.md]   (ends with per-build top offers for each variant)
 */
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const APP = path.join(__dirname, "..");
@@ -20,17 +20,20 @@ vm.runInContext(app + "\n;globalThis.__app = { H, WEIGHT, ROLE, roleNeed, overla
 const A = ctx.__app;
 
 const RUNS = +process.argv[2] || 200, DUDE_OFFERS = 10, RELIC_OFFERS = 14;
+// live = app.js WEIGHT as shipped; the others change one option each (user 2026-11-25: keep A / B handy, see them
+// on other builds). A = dedupe2, B = growOn "build", exp = the grow curve's power
+const LIVE = { mode: "grow", seen: 25, rare: 2, role: 40, exp: 1.5, dedupe2: false, growOn: "pairs" };
 const VARIANTS = [
-  { name: "Grow w^1.5, rarity ^2, no role fill", mode: "grow", seen: 25, rare: 2, role: 0 },
-  { name: "Role fill 5", mode: "grow", seen: 25, rare: 2, role: 5 },
-  { name: "Role fill 10", mode: "grow", seen: 25, rare: 2, role: 10 },
-  { name: "Role fill 20", mode: "grow", seen: 25, rare: 2, role: 20 },
-  { name: "Role fill 40 (live, 2026-11-25)", mode: "grow", seen: 25, rare: 2, role: 40 },
-  { name: "Role fill 80", mode: "grow", seen: 25, rare: 2, role: 80 },
-  { name: "Role fill 1000 (roles always first)", mode: "grow", seen: 25, rare: 2, role: 1000 },
+  { name: "Live (w^1.5)", ...LIVE },
+  { name: "A: no duplicate two-step", ...LIVE, dedupe2: true },
+  { name: "B: grow on build side only", ...LIVE, growOn: "build" },
+  { name: "A + B", ...LIVE, dedupe2: true, growOn: "build" },
+  { name: "Gentler curve w^1.25", ...LIVE, exp: 1.25 },
+  { name: "w^1.25 + B", ...LIVE, exp: 1.25, growOn: "build" },
 ];
+const setV = (v) => { Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1, exp: v.exp ?? 1.5, dedupe2: !!v.dedupe2, growOn: v.growOn || "pairs" }); A.ROLE.w = v.role ?? 40; };
 const rng = (seed) => () => ((seed = (seed + 0x6d2b79f5) | 0), (((seed ^ (seed >>> 15)) * (1 | seed)) >>> 0) / 4294967296);
-const dudes = A.H.dudes.filter((d) => d.name).map((d) => "dude:" + d.t);
+const dudes = A.H.dudes.filter((d) => d.name && !d.sum).map((d) => "dude:" + d.t);   // summons are never offered
 const pick = (r, arr, n) => { const a = arr.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
 function pool(build) {
   const team = [...new Set(build.filter((k) => k.startsWith("dude:")))].map(A.itemOf);
@@ -40,7 +43,7 @@ function pool(build) {
 const choose = (build, opts) => opts.map((k) => [k, A.overlap(A.itemOf(k), build).score]).sort((a, b) => b[1] - a[1])[0][0];
 
 function simulate(v, seed, stopAt) {
-  Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1 }); A.ROLE.w = v.role ?? 10;
+  setV(v);
   const r = rng(seed);
   const build = [pick(r, dudes, 1)[0]];
   for (let i = 0; i < DUDE_OFFERS + RELIC_OFFERS; i++) {
@@ -96,14 +99,23 @@ for (const v of VARIANTS) {
   for (const m of results[v.name]) if (m.topCh[0]) c[m.topCh[0]] = (c[m.topCh[0]] || 0) + 1;
   lines.push(`- ${v.name}: ` + Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `${k} ${pct(n / RUNS)}`).join(", "));
 }
-// snapshot: one mid-run build (current weighting, run 1, after 12 offers); every variant ranks every option
-const mid = simulate(VARIANTS[0], 1, 12);
+// scenarios: the user's build (2026-11-25: Viking, Psionic, General + Valkyrie Amulet, Ancient Sword, Padded Helmet) and
+// four simulated mid-run builds (live weighting, runs 1-4, after 8 offers); each variant's top Dude and relic offers
 const name = (k) => A.itemOf(k).name;
-lines.push("", `## Snapshot: one mid-run build`, "", mid.map(name).join(", "), "");
-const opts = [...dudes, ...pool(mid)];
-for (const v of VARIANTS) {
-  Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1 }); A.ROLE.w = v.role ?? 10;
-  const ranked = opts.map((k) => [k, A.overlap(A.itemOf(k), mid)]).sort((a, b) => b[1].score - a[1].score).slice(0, 8);
-  lines.push(`**${v.name}** top 8: ` + ranked.map(([k, o]) => `${name(k)} ${f1(o.score)}${o.dilute ? ` (dilution ${f1(o.dilute)})` : ""}`).join(" · "), "");
+const rid = (n) => "relic:" + A.H.relics.find((r) => r.name === n).id;
+const SCEN = [["Your build", ["dude:viking", "dude:psionic", "dude:general", rid("Valkyrie Amulet"), rid("Ancient Sword"), rid("Padded Helmet")]],
+  ...[1, 2, 3, 4].map((s) => ["Simulated run " + s, simulate(VARIANTS[0], s, 8)])];
+for (const [title, b] of SCEN) {
+  lines.push("", `## ${title}: ${b.map(name).join(", ")}`, "");
+  const types = new Set(b.filter((k) => k.startsWith("dude:")));
+  for (const [kind, opts] of [["Dude", dudes.filter((k) => !types.has(k) && !A.itemOf(k).sum)], ["Relic", pool(b)]]) {
+    lines.push(`| ${kind} offers | top 6 |`, "|---|---|");
+    for (const v of VARIANTS) {
+      setV(v);
+      const ranked = opts.map((k) => [k, A.overlap(A.itemOf(k), b).score]).sort((x, y) => y[1] - x[1]).slice(0, 6);
+      lines.push(`| ${v.name} | ` + ranked.map(([k, sc]) => `${name(k)} ${f1(sc)}`).join(" · ") + " |");
+    }
+    lines.push("");
+  }
 }
 console.log(lines.join("\n"));

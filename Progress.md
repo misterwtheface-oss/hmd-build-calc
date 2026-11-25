@@ -196,12 +196,22 @@
   General + Ancient Sword build, lifted the average best of a fresh three to 25.3 while the median was 11.9): Reroll
   when the median best of a fresh three beats the best offered by more than a saved die is worth; the line shows the
   chance a fresh three beats the best offered ("63% better · 11.9 vs 9.3").
+- 2026-11-25 (5): Necrodude check (user). Code: Bony Backhand's on-summon taunt runs taunt_enemies_in_range ->
+  taunt_enemy, which emits on_taunt_dude for any taunter on the Dudes' team (no summon check); Ancient Sword's handler
+  (anon@29619) checks only its cooldown and summon_chance, then summons a Skeledude at the taunter: the two loop,
+  capped by the Sword's cooldown (extract code/decomp_taunt). Kept as script options, live unchanged: WEIGHT.exp (grow
+  power), dedupe2 (A: drop a two-step pair whose middle effect already pairs directly with the consumer), growOn
+  "build" (B: a channel grows only with the build's own effects, the offer's add linearly). tools/weight_preview.js
+  compares them (simulated drafts + top offers on the user's build and 4 simulated builds; summons no longer offered
+  in the simulation): report extract docs/weight_scenarios_2026-11-25.md.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
+- [ ] Draft weighting options A (dedupe2) / B (growOn build) / gentler curve (exp): kept handy, not live (user
+  2026-11-25); report extract docs/weight_scenarios_2026-11-25.md.
 - [ ] Backlog (user 2026-11-25, later): a "discovered Dudes" setting so the Dude reroll advice weighs undiscovered Dude
   Types 3:1 as the game does (extract docs/offer_draws.md).
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

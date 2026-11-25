@@ -96,7 +96,9 @@ function pairs2(k) {
   return P2[k] || [];
 }
 // an effect's pairs: direct ones, then two-step ones whose middle effect has(mid)
-const pairsOf = (k, has) => [...(PAIR[k] || []), ...pairs2(k).filter((l) => has(l.mid))];
+// (WEIGHT.dedupe2: a two-step pair is left out when its middle effect already pairs directly with its consumer on the channel)
+const dup2 = (l, k) => (PAIR[l.give ? l.o : k] || []).some((p) => p.o === l.mid && p.ch === l.ch);
+const pairsOf = (k, has) => [...(PAIR[k] || []), ...pairs2(k).filter((l) => has(l.mid) && !(WEIGHT.dedupe2 && dup2(l, k)))];
 // a row channel key: a two-step channel is kept apart ("Dash|2") so it scores HALF
 const chKey = (l) => (l.two ? l.ch + "|2" : l.ch);
 const chBase = (c) => c.replace(/\|2$/, "");
@@ -427,8 +429,12 @@ const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) 
 // a channel the build has invested in grows. Pool = universal + each Family with a member + each drafted Dude's
 // relics, drawn uniformly (decoded 2026-11-25, extract docs/offer_draws.md: array_get_random over eligible relics): a Dude offer that grows it dilutes the odds
 // of the build's own pool relics, scored as a minus.
-const WEIGHT = { mode: "grow", seen: 25, rare: 2 };   // rare: exponent on channel rarity in offer scores (1 = as is)
-const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** 1.5 };
+// Options kept for comparison (user 2026-11-25, tools/weight_scenarios.js), live values unchanged: exp = the grow
+// curve's power; dedupe2 (A) drops a two-step pair whose middle effect already pairs directly with the same consumer on
+// that channel; growOn "build" (B) grows a channel only with the build's own effects on it (w x M^(exp-1), M = the
+// summed weights of the distinct build effects in the channel), the offer's effects adding linearly; "pairs" = all pairs
+const WEIGHT = { mode: "grow", seen: 25, rare: 2, exp: 1.5, dedupe2: false, growOn: "pairs" };   // rare: exponent on channel rarity
+const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** WEIGHT.exp };
 const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
   + types.reduce((a, t) => a + relicsOfDude(t).length, 0);
 const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
@@ -550,11 +556,11 @@ function overlap(x, build, sec) {
       const h = owner.get(l.o);
       if (!h || (!offered && !pairOk(l, s, l.o)) || (h.t && taken(h.t))) continue;
       const w = lw(l, s), c = chKey(l);
-      if (receives && !l.give) putPair(self, x, c, s, l.label, l.o, l.olabel, w);
+      if (receives && !l.give) putPair(self, x, c, s, l.label, l.o, l.olabel, w, av(l.o, n1), l.o);
       // a trinket offer only meets drafted Dudes: a Family / Global relic reaches every Dude ("All Dudes gain",
       // "When a Dude ..."; its Family only decides who can be offered it), so it counts in each free Dude's row
-      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, c, l.o, l.olabel, s, l.label, w);
-      else putPair(h.t ? dudeRows : famRows, h, c, l.o, l.olabel, s, l.label, w);
+      else if (offered && !h.t) for (const d of team.filter((d) => !taken(d.t))) putPair(dudeRows, d, c, l.o, l.olabel, s, l.label, w, av(l.o, n1), l.o);
+      else putPair(h.t ? dudeRows : famRows, h, c, l.o, l.olabel, s, l.label, w, av(l.o, n1), l.o);
     }
   out.secs.push({ rows: scoreRows(self, mag, WEIGHT.rare) }, { rows: scoreRows(dudeRows, mag, WEIGHT.rare) });
   for (const f of newFams) {
@@ -562,7 +568,7 @@ function overlap(x, build, sec) {
     for (const r of relicsOfFamilyPool(f))
       for (const l of pairsOf("relic:" + r.id, hasMid)) {
         const h = owner.get(l.o);
-        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, chKey(l), l.o, l.olabel, "relic:" + r.id, l.label, lw(l, "relic:" + r.id));
+        if (h && h !== FAM[f] && pairOk(l, "relic:" + r.id, l.o)) putPair(rows, h, chKey(l), l.o, l.olabel, "relic:" + r.id, l.label, lw(l, "relic:" + r.id), av(l.o, n1), l.o);
       }
     out.secs.push({ head: FAM[f], rows: scoreRows(rows, mag, WEIGHT.rare) });
   }
@@ -578,7 +584,7 @@ function overlap(x, build, sec) {
       for (const [e, h] of owner)
         for (const l of pairsOf(e, (m) => owner.has(m))) {
           const o = owner.get(l.o);
-          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, chKey(l), e, l.label, l.o, l.olabel, lw(l, e, n, false));
+          if (!l.give && o && o !== h && pairOk(l, e, l.o)) putPair(rows, h, chKey(l), e, l.label, l.o, l.olabel, lw(l, e, n, false), av(l.o, n), l.o);
         }
       return scoreRows(rows, mag, WEIGHT.rare).reduce((a, r) => a + r.score, 0);
     };
@@ -599,17 +605,22 @@ function overlap(x, build, sec) {
 // side's}, effect key -> facet labels}; a row scores the weight of each distinct channel it holds
 const addTo = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
 const headKey = (h) => (h.t ? "dude:" + h.t : FAM[h.id] === h || h.src ? "family:" + h.id : keyOf(h));
-function putPair(rows, h, ch, own, ownLabel, other, otherLabel, w = 1) {
+// bk / bw: the pair's build-side effect and its weight (the build's investment in the channel, WEIGHT.growOn "build")
+function putPair(rows, h, ch, own, ownLabel, other, otherLabel, w = 1, bw, bk) {
   const hk = headKey(h);
   const row = rows.get(hk) || rows.set(hk, { x: h, ch: new Map() }).get(hk);
-  const c = row.ch.get(ch) || row.ch.set(ch, { theirs: new Map(), mine: new Map(), w: 0 }).get(ch);
+  const c = row.ch.get(ch) || row.ch.set(ch, { theirs: new Map(), mine: new Map(), w: 0, b: new Map() }).get(ch);
   addTo(c.theirs, own, ownLabel);
   addTo(c.mine, other, otherLabel);
   c.w += w;
+  if (bk) c.b.set(bk, bw);
 }
+// a channel's magnitude: mag(summed pair weights); WEIGHT.growOn "build" grows it only with the build's own effects
+const magOf = (v, mag) => (mag === MAG.grow && WEIGHT.growOn === "build" && v.b?.size
+  ? v.w * [...v.b.values()].reduce((a, x) => a + x, 0) ** (WEIGHT.exp - 1) : mag(v.w));
 // a row's score: each channel's rarity x its magnitude (WEIGHT.mode; the Team view stays flat); a two-step channel x HALF
 const scoreRows = (rows, mag = MAG.flat, rare = 1) => [...rows.values()]
-  .map((r) => ({ ...r, score: [...r.ch].reduce((a, [c, v]) => a + chWeight(chBase(c)) ** rare * (c === chBase(c) ? 1 : HALF) * mag(v.w), 0) }))
+  .map((r) => ({ ...r, score: [...r.ch].reduce((a, [c, v]) => a + chWeight(chBase(c)) ** rare * (c === chBase(c) ? 1 : HALF) * magOf(v, mag), 0) }))
   .sort((a, b) => b.score - a.score || byName(a.x, b.x));
 // Team view: pairs between the source effects and the target effects (ok(key)), one row per owner: a Dude (his
 // ability and relics) or the group of a Family / Universal / Promoter relic
