@@ -198,6 +198,8 @@
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
+- [ ] Backlog (user 2026-11-25, later): a "discovered Dudes" setting so the Dude reroll advice weighs undiscovered Dude
+  Types 3:1 as the game does (extract docs/offer_draws.md).
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
   In progress as the Dude audit (alphabetical, one Dude at a time, user analysis + code answers only, no Claude
