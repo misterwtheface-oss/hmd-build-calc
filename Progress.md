@@ -170,7 +170,7 @@
   rarity^2 keeps the focus off generic stats, which have the most overlaps. Gated effects (user): a facet in a
   sentence that opens with a condition ("When X, ...") weighs the odds X is open: per gate, the summed weights of the
   build's effects that open it, capped at 1 (extract effect_tags gates / gate_src, AMBIENT = Hit, Hit Taken, Fatal
-  Damage, Knock Out always open; a gate the effect opens itself counts open). Simulated drafts (200, gate-aware
+  Damage, Knock Out, Thrown, Cleaved always open (user 2026-11-25: thrown / cleaved happen naturally in a fight); a gate the effect opens itself counts open). Simulated drafts (200, gate-aware
   measure): Families 4.9 -> 4.0, top-3 channel share 68% -> 70%, builds led by Attack Power / DPS / Damage Dealt
   22% -> 8%. Trinket picks regenerated with the same formula (extract tools/held_picks.py reads mode, rare, grow from
   app.js).
