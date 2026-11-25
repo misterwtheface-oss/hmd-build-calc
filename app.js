@@ -431,6 +431,22 @@ const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, l
 const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
   + types.reduce((a, t) => a + relicsOfDude(t).length, 0);
 const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
+// Role fill (user 2026-11-25): a Dude offer of a new type, while the team has fewer than act1 types (Act 1 brings
+// five: new types on rounds 1, 3, 6, 9, 17), scores w x the share of the missing roles it fills x urgency (missing
+// roles / type picks left). Roles: each Dude's Effect role (extract data/effect_roles.json: the user's audit ruling,
+// else mapped from the game's DudeType.roles); his primary fills a role, his secondary half; a role needs 1
+// (w 40, user ask 2026-11-25: tools/weight_preview.js, Act 1 teams with all four roles 17% -> 54%; the ceiling with
+// three random Dudes per offer is 57%, synergy unchanged)
+const ROLE = { w: 40, act1: 5, roles: ["Tank", "DPS", "Healer", "Support"] };
+const roleNeed = (types) => ROLE.roles.reduce((a, r) => a + 1 - Math.min(1, types.reduce((s, t) => {
+  const er = DUDE[t]?.er || [];
+  return s + (er[0] === r ? 1 : er[1] === r ? 0.5 : 0);
+}, 0)), 0);
+function roleFill(x, types) {
+  if (!x.t || !x.er || types.includes(x.t) || types.length >= ROLE.act1) return 0;
+  const need = roleNeed(types);
+  return ROLE.w * (need - roleNeed([...types, x.t])) * (need / (ROLE.act1 - types.length));
+}
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build, sec) {
   const items = build.map(itemOf);
@@ -523,12 +539,13 @@ function overlap(x, build, sec) {
     out.dilute = Math.round((at(n1) - at(n0)) * 10) / 10;
   }
   // rounded to the shown precision, so offers showing the same score tie (float sums differ by order)
-  const total = out.secs.reduce((a, sec) => a + sec.score, 0) + out.dilute + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
+  out.role = Math.round(roleFill(x, types) * 10) / 10;
+  const total = out.secs.reduce((a, sec) => a + sec.score, 0) + out.dilute + out.role + 3 * out.fam.reduce((s, f) => s + f[1], 0) + 3 * out.links.length;
   out.score = Math.round(total * 10) / 10;
   // shown apart: what each Family the offer brings in adds (its relics), and the offer's own fit (the rest);
   // the recommendation still ranks by the combined score
   out.newFams = out.secs.filter((sec) => sec.head).map((sec) => ({ f: sec.head, score: Math.round(sec.score * 10) / 10, rows: sec.rows }));
-  out.own = Math.round((total - out.dilute - out.newFams.reduce((a, n) => a + n.score, 0)) * 10) / 10;
+  out.own = Math.round((total - out.dilute - out.role - out.newFams.reduce((a, n) => a + n.score, 0)) * 10) / 10;
   return out;
 }
 
@@ -609,7 +626,8 @@ function slotHtml(i, best, maxes) {
     ${draft.build.length ? `<div class="ovl"><span>Overlap</span>${bar(o.own, maxes.own)}<b>${num1(o.own)}</b></div>${ov.length ? `<div class="chipline">${ov.join("")}</div>` : ""}${o.secs.filter((sec) => !sec.head).map(secHtml).join("")}
       ${o.newFams.map((n) => `<div class="ovl nfam"><button class="chiplink" data-open="family:${n.f.id}">${famIcon(n.f.id)}${esc(n.f.name)}</button>${bar(n.score, maxes.fam)}<b>${num1(n.score)}</b></div>${holderRows(n.rows)}`).join("")}
       ${o.dilute ? `<div class="ovl nfam"><span>Pool dilution</span><span></span><b>${num1(o.dilute)}</b></div>` : ""}
-      ${o.newFams.length || o.dilute ? `<div class="ovl total"><span>Total</span>${bar(o.score, maxes.total)}<b>${num1(o.score)}</b></div>` : ""}` : ""}
+      ${o.role ? `<div class="ovl nfam"><span>Fills ${esc(x.er.filter(Boolean).join(" / "))}</span><span></span><b>${num1(o.role)}</b></div>` : ""}
+      ${o.newFams.length || o.dilute || o.role ? `<div class="ovl total"><span>Total</span>${bar(o.score, maxes.total)}<b>${num1(o.score)}</b></div>` : ""}` : ""}
     ${giveOrTake(i, x, o)}</div>`;
 }
 
@@ -739,7 +757,8 @@ function dudeView(t) {
     .map((f) => `<div class="tags fn-${f}"><span class="fnhead">${esc(f)}:</span>${fns.filter((x) => x.fn[0] === f)
       .map((x) => `<span class="tag fn fn-${f}">${esc(x.fn[1] || f)}<b>×${fnN(x)}</b></span>`).join("")}</div>`)
     .join("");
-  const roleRow = FEATURES.roles && d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : "";
+  const roleRow = (FEATURES.roles && d.roles.length ? `<div class="meta"><span class="lbl">Role:</span>${roleBadge(d)}</div>` : "")
+    + (FEATURES.roles && d.er ? `<div class="meta"><span class="lbl">Effect role:</span>${esc(d.er.filter(Boolean).join(" · "))}</div>` : "");
   // his relics in the audit's priority order (rank pr), unranked ones A-Z after
   const relics = relicsOfDude(t).sort((a, b) => (a.pr || 1e9) - (b.pr || 1e9));
   const family = d.fam.map((f) => `<div class="meta">${famChip(f)}</div>${grid(membersOf(f).filter((x) => x.t !== t).map((x) => mini(x)))}`).join("");

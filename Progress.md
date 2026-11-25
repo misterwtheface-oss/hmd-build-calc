@@ -174,6 +174,13 @@
   measure): Families 4.9 -> 4.0, top-3 channel share 68% -> 70%, builds led by Attack Power / DPS / Damage Dealt
   22% -> 8%. Trinket picks regenerated with the same formula (extract tools/held_picks.py reads mode, rare, grow from
   app.js).
+- 2026-11-25 (1): Draft role fill (user: early deaths come from teams missing a role, most of all recovery). Effect
+  role per Dude, Tank / DPS / Healer / Support (Healer split from Support, user), primary + optional secondary (half);
+  set in the Dude audit, until then mapped from the game's DudeType.roles (extract tools/effect_roles.py ->
+  data/effect_roles.json; Regular Dude has no code role). A Dude offer of a new type while the team has < 5 types
+  (Act 1 brings five) adds 40 x the share of missing roles it fills x (missing / type picks left); shown as "Fills
+  <role>" on the offer. Dude page: Effect role line. Simulated: Act 1 teams with all four roles 17% -> 54% (ceiling
+  57% with three random Dudes per offer), synergy unchanged.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
