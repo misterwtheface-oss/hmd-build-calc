@@ -105,7 +105,8 @@
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
-  Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
+  Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD, Airhorn done (2026-11-25: Regular Dude excluded like summons; AoE gap
+multiplier for AoE-giving held items); next: Bad Credit. Bounds 2-10 Dudes per trinket (upper "for now").
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
