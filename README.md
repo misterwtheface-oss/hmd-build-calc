@@ -5,6 +5,7 @@ them (Family membership, Dude / Family relic pools, synergies, Dudes and relics 
 Synergies: an effect that raises a stat links to one that scales with it; an effect that triggers an event (Taunt,
 Block) links to ones that react to or improve it. A Dude counts with all his relics. Roles derive from the same tags.
 Draft: preview up to 3 offers against a saved build and see where they overlap.
+Glossary: tap a highlighted mechanic for the game's own Dudex entries for that Dude, relic, trinket or trait.
 Mobile first.
 
 Live: https://misterwtheface-oss.github.io/hmd-build-calc/

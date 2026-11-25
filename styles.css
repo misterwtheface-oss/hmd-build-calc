@@ -131,6 +131,26 @@ h2 .tag { margin-left: 8px; vertical-align: middle; }
 .desc .ab, .slot .ab { font: 18px var(--narrow); color: var(--mustard); margin-bottom: 4px; }
 .k { color: var(--teal); font-weight: 600; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 .k.solo { cursor: default; text-decoration: none; }
+button.k { border: 0; background: none; padding: 0; font-size: inherit; line-height: inherit; }
+/* glossary popup (the game's Dudex entries for the tapped thing): bottom sheet on a phone, centred box when wide */
+#gloss { position: fixed; inset: 0; z-index: 30; background: rgba(10, 6, 8, .55); display: flex; align-items: flex-end; justify-content: center; }
+.gbox {
+  width: 100%; max-width: 480px; max-height: 70vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 2px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.ghead { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--line); font: 19px var(--narrow); color: var(--mustard); }
+.ghead span { flex: 1; min-width: 0; }
+.gback, .gx { border: 0; background: none; cursor: pointer; color: var(--mustard); font: 22px/1 var(--narrow); padding: 6px 10px; }
+.gback { order: -1; padding-left: 0; }
+.gbody { overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 10px; }
+.gent { padding: 8px 0; border-top: 1px solid var(--panel2); }
+.gent:first-child { border-top: 0; }
+.gname { display: flex; align-items: center; gap: 6px; font: 17px var(--narrow); color: var(--teal); margin-bottom: 2px; }
+.gent.on .gname { color: var(--mustard); }
+button.gname { border: 0; background: none; padding: 0; cursor: pointer; color: var(--brick); }
+button.gname img { width: 24px; height: 24px; }
+@media (min-width: 560px) { #gloss { align-items: center; } .gbox { border-bottom: 2px solid var(--line); border-radius: var(--radius); } }
 .d { color: var(--brick); font-weight: 600; cursor: pointer; }
 .u { color: var(--brick); font-weight: 600; }
 .v {

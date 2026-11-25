@@ -16,8 +16,8 @@ const ctx = { window: {}, console, localStorage: { getItem: (k) => store[k] ?? n
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(APP, "data.js"), "utf8"), ctx);
 const app = fs.readFileSync(path.join(APP, "app.js"), "utf8").replace('"use strict";', "");
-vm.runInContext(app + "\n;globalThis.__app = { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf };", ctx);
-const { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf } = ctx.__app;
+vm.runInContext(app + "\n;globalThis.__app = { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf, glList, glStack, renderGloss };", ctx);
+const { VIEWS, TABS, state, H, renderControls, renderList, draft, pickResults, overlap, keyOf, glList, glStack, renderGloss } = ctx.__app;
 
 const icons = new Set(fs.readdirSync(path.join(APP, "assets", "icons")));
 const problems = [];
@@ -86,6 +86,24 @@ for (const f of H.families) tryRender(`family ${f.id}`, () => VIEWS.family(f.id)
 for (const c of H.chans) tryRender(`ch ${c.id}`, () => VIEWS.ch(c.id));
 for (const e of H.enemies) tryRender(`enemy ${e.id}`, () => VIEWS.enemy(e.id));
 for (const t of H.traits) tryRender(`trait ${t.id}`, () => VIEWS.trait(t.id));
+// glossary popups: every thing's list and every term with its own list, each entry named (a keyword tap opens it)
+const glKeys = [...H.dudes.map(keyOf), ...H.relics.map(keyOf), ...H.trinkets.map(keyOf), ...H.traits.map((t) => "trait:" + t.id),
+  ...Object.keys(H.gloss).filter((id) => H.gloss[id][2].length).map((id) => "g:" + id)];
+let glOpened = 0;
+for (const gk of glKeys) {
+  if (!glList(gk).length) continue;
+  glOpened++;
+  tryRender(`glossary ${gk}`, () => {
+    glStack.length = 0;
+    glStack.push({ gk, kw: "" });
+    renderGloss();
+    const html = els["#gloss"].innerHTML;
+    const shown = (html.match(/class="gent/g) || []).length;
+    if (shown !== glList(gk).length) problems.push(`glossary ${gk}: ${shown} of ${glList(gk).length} entries shown`);
+    return html;
+  });
+}
+if (glOpened < 500) problems.push(`glossary: only ${glOpened} popups (expected 500+)`);
 
 if (problems.length) {
   console.log(problems.slice(0, 40).join("\n"));

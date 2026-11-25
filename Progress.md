@@ -206,6 +206,13 @@
   in the simulation): report extract docs/weight_scenarios_2026-11-25.md.
 - 2026-11-25 (6): A and B switched on (user): WEIGHT dedupe2 true, growOn "build". User's build: Necrodude 209.6 ->
   66.8, Knight 39.5 next.
+- 2026-11-25 (7): In-game glossary tooltips (user). Tapping a highlighted keyword in any Dude ability, relic, trinket
+  or enemy trait opens the game's own Dudex popup for that thing: every entry the game lists for it (code lists, not
+  text; extract tools/glossary_map.py -> data/glossary.json), the tapped one first in mustard when the names match.
+  Entries: 66 glossary terms, 34 stats, Dude abilities (tap = his page), 7 consumables; term numbers come from the
+  term's Dude (Revenant 10% = Lich ability). A keyword inside an entry opens that term's own list (‹ back). Bottom
+  sheet on a phone, centred box when wide. FEATURES.glossary. Two traits (Phased, Hellfire) build their list through
+  a call the dump can't read: no popup (their text names no mechanic). render_check opens all 621 popups.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's

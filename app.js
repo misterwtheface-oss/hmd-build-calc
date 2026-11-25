@@ -1,7 +1,7 @@
 "use strict";
 /* How Many Dudes? Codex — data: window.HMD (tools/build_data.py). Mobile first. */
 
-const FEATURES = { roles: true, synergy: true, draft: true };
+const FEATURES = { roles: true, synergy: true, draft: true, glossary: true };
 
 const H = window.HMD;
 const $ = (s) => document.querySelector(s);
@@ -239,11 +239,13 @@ const FMT = { percent: "%", cash: "$", seconds: "s", number: "" };
 // game formatting (hmd_loctext_fill): percent = value x 100, cash = $value, seconds / number = the value
 const num = (v) => String(Math.round(v * 100) / 100);
 const fmtVal = (v, f) => (f === "percent" ? num(v * 100) + "%" : f === "cash" ? "$" + num(v) : num(v));
-function renderSegs(seg) {
+// gk: whose glossary a tapped keyword opens (keyOf, "trait:<id>" or "g:<term>"), as the game's popup for that thing
+function renderSegs(seg, gk) {
+  const tap = FEATURES.glossary && gk && glList(gk).length;
   return seg
     .map(([kind, a, b, c]) => {
       if (kind === "t") return esc(a);
-      if (kind === "k") return `<span class="k solo">${esc(b)}</span>`;
+      if (kind === "k") return tap ? `<button class="k" data-gl="${gk}" data-kw="${esc(a)}">${esc(b)}</button>` : `<span class="k solo">${esc(b)}</span>`;
       if (kind === "d") return `<span class="d" data-open="dude:${a}">${esc(b)}</span>`;
       if (kind === "u") return `<span class="u">${esc(a)}</span>`;
       if (kind === "v")
@@ -252,6 +254,38 @@ function renderSegs(seg) {
     })
     .join("");
 }
+/* ---------- glossary popup: the game's Dudex entries for a thing (extract tools/glossary_map.py) ----------
+   The game lists, per Dude ability / relic / trinket / trait / stat / term, the entries its popup shows (code, not
+   text); a tapped keyword opens that list, its own entry first when the names match. A Dude id = his ability. */
+function glList(gk) {
+  const [k, id] = gk.split(":");
+  return (k === "g" ? H.gloss[id]?.[2] : k === "trait" ? TRAIT[id]?.gl : itemOf(gk)?.gl) || [];
+}
+const glTitle = (gk) => { const [k, id] = gk.split(":"); return k === "g" ? H.gloss[id]?.[0] : k === "trait" ? TRAIT[id]?.name : itemOf(gk)?.name; };
+function glEntry(id, on) {
+  const g = H.gloss[id], d = DUDE[id];
+  const head = g ? `<div class="gname">${esc(g[0])}</div>`
+    : `<button class="gname" data-open="dude:${id}">${img(d.icon, d.name)}${esc(d.ab || d.name)}</button>`;
+  return `<div class="gent${on ? " on" : ""}">${head}<div>${g ? renderSegs(g[1], g[2].length ? "g:" + id : null) : renderSegs(d.seg, keyOf(d))}</div></div>`;
+}
+const glStack = [];
+function renderGloss() {
+  let el = $("#gloss");
+  if (!glStack.length) return el?.remove();
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "gloss";
+    document.body.append(el);
+  }
+  const { gk, kw } = glStack[glStack.length - 1];
+  const ids = glList(gk).filter((id) => H.gloss[id] || DUDE[id]);
+  const hit = ids.find((id) => H.gloss[id]?.[0] === kw || DUDE[id]?.ab === kw);
+  el.innerHTML = `<div class="gbox" role="dialog" aria-modal="true"><div class="ghead">${glStack.length > 1 ? `<button class="gback" data-glback>‹</button>` : ""}
+    <span>${esc(glTitle(gk))}</span><button class="gx" data-glclose aria-label="Close">×</button></div>
+    <div class="gbody">${[hit, ...ids.filter((id) => id !== hit)].filter(Boolean).map((id) => glEntry(id, id === hit)).join("")}</div></div>`;
+}
+const closeGloss = () => { glStack.length = 0; renderGloss(); };
+
 const section = (title, body) => (body ? `<h3>${esc(title)}</h3>${body}` : "");
 // a Dude's base stats or an Enemy's stats, [name, text] in the game's own format
 // a stat table; with max (a Dude's page) each row carries a bar: its share of that stat's largest value among all Dudes
@@ -671,7 +705,7 @@ function slotHtml(i, best, maxes) {
   const x = itemOf(key);
   const o = overlap(x, draft.build, draft.slotSec[i]);
   const label = x.t ? x.fam.map(famIcon).join("") : poolIcon(x);
-  const text = (x.ab ? `<div class="ab">${esc(x.ab)}${fnTag(x)}</div>` : "") + renderSegs(x.seg);
+  const text = (x.ab ? `<div class="ab">${esc(x.ab)}${fnTag(x)}</div>` : "") + renderSegs(x.seg, keyOf(x));
   const ov = [
     ...o.fam.map(([f, n]) => `<button class="chiplink" data-open="family:${f}">${famIcon(f)}${esc(FAM[f].name)} ×${n}</button>`),
     ...o.links.map((b) => `<button class="chiplink" data-open="${keyOf(b)}">${img(b.icon, b.name)}${esc(b.name)}</button>`),
@@ -795,7 +829,7 @@ function offer(key) {
 // full relic container: header (opens the relic), its effect text and its synergy tags
 function relicCard(r) {
   return `<div class="rcard"><button class="rhead" data-open="${keyOf(r)}">${img(r.icon, r.name)}<span>${r.pr ? `<b class="rank">#${r.pr}</b>` : ""}${esc(r.name)}</span>${fnTag(r)}</button>
-    <div class="rdesc">${renderSegs(r.seg)}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
+    <div class="rdesc">${renderSegs(r.seg, keyOf(r))}</div>${FEATURES.synergy ? fxLine(r) : ""}</div>`;
 }
 
 // draft action in the detail sheet's header bar (Dude and relic pages)
@@ -834,7 +868,7 @@ function dudeView(t) {
     ${statTable(d.stats, DUDE_STAT_MAX)}
     ${FEATURES.roles ? section("Effect functions", fnRows ? `<div class="role">${fnRows}</div>` : "") : ""}
     ${syn ? section("Effect edges", edgeBars(t)) : ""}
-    ${section("Intrinsic effect", d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg)}${syn ? fxLine(d) : ""}</div>` : "")}
+    ${section("Intrinsic effect", d.ab || d.seg.length ? `<div class="desc">${d.ab ? `<div class="ab">${esc(d.ab)}${fnTag(d)}</div>` : ""}${renderSegs(d.seg, keyOf(d))}${syn ? fxLine(d) : ""}</div>` : "")}
     ${section("Relics", relicCards(relics))}
     ${section("Top trinkets", grid((d.picks?.tr || []).map((id, i) => mini(TRINKET[id], "#" + (i + 1)))))}
     ${section("Top food", grid((d.picks?.fd || []).map((id, i) => mini(FOOD[id], "#" + (i + 1)))))}
@@ -856,7 +890,7 @@ function relicView(id) {
   const linked = (H.links[key] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   const syn = FEATURES.synergy;
   return `<div class="hero">${img(r.icon, r.name)}<div><h2>${esc(r.name)}${fnTag(r)}</h2><div class="meta">${pool}</div></div></div>
-    <div class="desc">${renderSegs(r.seg)}${syn ? fxLine(r) : ""}</div>
+    <div class="desc">${renderSegs(r.seg, keyOf(r))}${syn ? fxLine(r) : ""}</div>
     ${syn ? section("Synergies", grid(linked)) : ""}
     ${syn ? twoStep(key, [key]) : ""}
     ${section("Names", grid(refs))}`;
@@ -903,7 +937,7 @@ function trinketView(id) {
   if (!t) return null;
   const linked = (H.links["trinket:" + id] || []).filter(([u]) => unitItem(u)).map(([u, score, chs]) => partnerMini({ u, score, chs }));
   return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2><div class="meta"><button class="chiplink" data-open="stash:all">${poolIcon(t)}Trinket Stash</button></div></div></div>
-    <div class="desc">${renderSegs(t.seg)}${FEATURES.synergy ? fxLine(t) : ""}</div>
+    <div class="desc">${renderSegs(t.seg, keyOf(t))}${FEATURES.synergy ? fxLine(t) : ""}</div>
     ${section("Recommended on", pickedBy("tr", id))}
     ${FEATURES.synergy ? section("Synergies", grid(linked)) + twoStep("trinket:" + id, ["trinket:" + id]) : ""}`;
 }
@@ -945,7 +979,7 @@ const enemyChip = (id) => (ENEMY[id] ? `<button class="chiplink" data-open="enem
 const traitCard = (id) => {
   const t = TRAIT[id];
   return t ? `<div class="rcard"><button class="rhead" data-open="trait:${id}">${img(t.icon, t.name)}<span>${esc(t.name)}</span></button>
-    <div class="rdesc">${renderSegs(t.seg)}</div></div>` : "";
+    <div class="rdesc">${renderSegs(t.seg, "trait:" + id)}</div></div>` : "";
 };
 function enemyView(id) {
   const e = ENEMY[id];
@@ -965,7 +999,7 @@ function traitView(id) {
   if (!t) return null;
   const who = enemiesSorted.filter((e) => e.traits.includes(id));
   return `<div class="hero">${img(t.icon, t.name)}<div><h2>${esc(t.name)}</h2></div></div>
-    <div class="desc">${renderSegs(t.seg)}</div>
+    <div class="desc">${renderSegs(t.seg, "trait:" + id)}</div>
     ${section("Enemies", grid(who.map((e) => `<button class="mini" data-open="enemy:${e.id}">${img(e.icon, e.name)}<span>${esc(e.name)}<small>${esc(enemyWhen(e))}</small></span></button>`)))}`;
 }
 
@@ -1020,6 +1054,25 @@ function switchTab(id) {
 
 /* ---------- events ---------- */
 document.addEventListener("click", (e) => {
+  const gl = e.target.closest("[data-gl]");
+  if (gl) {
+    if (!gl.closest("#gloss")) glStack.length = 0;
+    glStack.push({ gk: gl.dataset.gl, kw: gl.dataset.kw });
+    renderGloss();
+    return;
+  }
+  if (e.target.closest("[data-glback]")) {
+    glStack.pop();
+    renderGloss();
+    return;
+  }
+  if (glStack.length) {
+    // outside the box or ×: close; a link inside (a Dude) closes it and opens the page
+    const inside = e.target.closest(".gbox");
+    if (!inside || e.target.closest("[data-glclose]")) return closeGloss();
+    if (!e.target.closest("[data-open]")) return;
+    closeGloss();
+  }
   const tab = e.target.closest("[data-tab]");
   if (tab) {
     history.replaceState(null, "", "#" + tab.dataset.tab);
@@ -1157,9 +1210,10 @@ document.addEventListener("input", (e) => {
   renderList();
 });
 
-addEventListener("hashchange", route);
+addEventListener("hashchange", () => { closeGloss(); route(); });
 addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$("#overlay").classList.contains("hidden")) $("#back").click();
+  if (e.key === "Escape" && glStack.length) closeGloss();
+  else if (e.key === "Escape" && !$("#overlay").classList.contains("hidden")) $("#back").click();
 });
 
 renderTabs();
