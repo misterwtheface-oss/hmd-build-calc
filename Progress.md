@@ -204,14 +204,16 @@
   "build" (B: a channel grows only with the build's own effects, the offer's add linearly). tools/weight_preview.js
   compares them (simulated drafts + top offers on the user's build and 4 simulated builds; summons no longer offered
   in the simulation): report extract docs/weight_scenarios_2026-11-25.md.
+- 2026-11-25 (6): A and B switched on (user): WEIGHT dedupe2 true, growOn "build". User's build: Necrodude 209.6 ->
+  66.8, Knight 39.5 next.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
-- [ ] Draft weighting options A (dedupe2) / B (growOn build) / gentler curve (exp): kept handy, not live (user
-  2026-11-25); report extract docs/weight_scenarios_2026-11-25.md.
+- [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
+  docs/weight_scenarios_2026-11-25.md.
 - [ ] Backlog (user 2026-11-25, later): a "discovered Dudes" setting so the Dude reroll advice weighs undiscovered Dude
   Types 3:1 as the game does (extract docs/offer_draws.md).
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

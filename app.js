@@ -429,11 +429,11 @@ const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) 
 // a channel the build has invested in grows. Pool = universal + each Family with a member + each drafted Dude's
 // relics, drawn uniformly (decoded 2026-11-25, extract docs/offer_draws.md: array_get_random over eligible relics): a Dude offer that grows it dilutes the odds
 // of the build's own pool relics, scored as a minus.
-// Options kept for comparison (user 2026-11-25, tools/weight_scenarios.js), live values unchanged: exp = the grow
+// Options (user 2026-11-25, compared with tools/weight_preview.js; A and B switched on by the user the same day): exp = the grow
 // curve's power; dedupe2 (A) drops a two-step pair whose middle effect already pairs directly with the same consumer on
 // that channel; growOn "build" (B) grows a channel only with the build's own effects on it (w x M^(exp-1), M = the
 // summed weights of the distinct build effects in the channel), the offer's effects adding linearly; "pairs" = all pairs
-const WEIGHT = { mode: "grow", seen: 25, rare: 2, exp: 1.5, dedupe2: false, growOn: "pairs" };   // rare: exponent on channel rarity
+const WEIGHT = { mode: "grow", seen: 25, rare: 2, exp: 1.5, dedupe2: true, growOn: "build" };   // rare: exponent on channel rarity
 const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** WEIGHT.exp };
 const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
   + types.reduce((a, t) => a + relicsOfDude(t).length, 0);

@@ -22,14 +22,13 @@ const A = ctx.__app;
 const RUNS = +process.argv[2] || 200, DUDE_OFFERS = 10, RELIC_OFFERS = 14;
 // live = app.js WEIGHT as shipped; the others change one option each (user 2026-11-25: keep A / B handy, see them
 // on other builds). A = dedupe2, B = growOn "build", exp = the grow curve's power
-const LIVE = { mode: "grow", seen: 25, rare: 2, role: 40, exp: 1.5, dedupe2: false, growOn: "pairs" };
+const LIVE = { mode: "grow", seen: 25, rare: 2, role: 40, exp: 1.5, dedupe2: true, growOn: "build" };
 const VARIANTS = [
-  { name: "Live (w^1.5)", ...LIVE },
-  { name: "A: no duplicate two-step", ...LIVE, dedupe2: true },
-  { name: "B: grow on build side only", ...LIVE, growOn: "build" },
-  { name: "A + B", ...LIVE, dedupe2: true, growOn: "build" },
-  { name: "Gentler curve w^1.25", ...LIVE, exp: 1.25 },
-  { name: "w^1.25 + B", ...LIVE, exp: 1.25, growOn: "build" },
+  { name: "Live: A + B (user pick 2026-11-25)", ...LIVE },
+  { name: "Before: no A, no B", ...LIVE, dedupe2: false, growOn: "pairs" },
+  { name: "A only", ...LIVE, growOn: "pairs" },
+  { name: "B only", ...LIVE, dedupe2: false },
+  { name: "A + B, gentler curve w^1.25", ...LIVE, exp: 1.25 },
 ];
 const setV = (v) => { Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1, exp: v.exp ?? 1.5, dedupe2: !!v.dedupe2, growOn: v.growOn || "pairs" }); A.ROLE.w = v.role ?? 40; };
 const rng = (seed) => () => ((seed = (seed + 0x6d2b79f5) | 0), (((seed ^ (seed >>> 15)) * (1 | seed)) >>> 0) / 4294967296);
