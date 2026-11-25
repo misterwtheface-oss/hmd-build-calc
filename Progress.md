@@ -173,3 +173,6 @@
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
   In progress as the Dude audit (alphabetical, one Dude at a time, user analysis + code answers only, no Claude
   opinion): extract docs/dude_audit.md. Agent Dude done 2026-11-23 (incl. relic blurbs); Alien Dude done 2026-11-23 (incl. relic blurbs).
+- 2026-11-24: Back keeps your place: a page reached by Back (or the phone's back) returns to where you left it
+  scrolled (Dude page -> linked trinket -> Back lands at the same spot); a newly opened page starts at the top. The
+  scroll is stored on the history entry (app.js open() / route()).

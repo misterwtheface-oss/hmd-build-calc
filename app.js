@@ -893,7 +893,8 @@ function route() {
       $("#headact").innerHTML = ["dude", "relic", "trinket", "food"].includes(m[1]) ? offerBtn(m[1] + ":" + m[2]) : "";
       $("#overlay").classList.remove("hidden");
       $("#overlay").setAttribute("aria-hidden", "false");
-      $(".sheet").scrollTop = 0;
+      // a page reached by Back returns to where it was left (open() stores it on its history entry); a new one starts at the top
+      $(".sheet").scrollTop = history.state?.sheetY || 0;
       document.body.style.overflow = "hidden";
       return;
     }
@@ -912,6 +913,7 @@ function closeOverlay() {
 let depth = 0;
 function open(key) {
   depth++;
+  if (!$("#overlay").classList.contains("hidden")) history.replaceState({ sheetY: $(".sheet").scrollTop }, "");
   location.hash = encodeURIComponent(key).replace(/%3A/i, ":");
 }
 
