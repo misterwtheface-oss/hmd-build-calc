@@ -425,7 +425,7 @@ const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) 
 // how sure its two effects are to be in the build: taken (a Dude's ability, a picked relic, a held item, the offer
 // itself) = 1, a relic still in the pool = seen / pool size; a row's channel scores rarity x f(its pair weights), so
 // a channel the build has invested in grows. Pool = universal + each Family with a member + each drafted Dude's
-// relics, drawn uniformly (assumed; the game's draw rule isn't decoded): a Dude offer that grows it dilutes the odds
+// relics, drawn uniformly (decoded 2026-11-25, extract docs/offer_draws.md: array_get_random over eligible relics): a Dude offer that grows it dilutes the odds
 // of the build's own pool relics, scored as a minus.
 const WEIGHT = { mode: "grow", seen: 25, rare: 2 };   // rare: exponent on channel rarity in offer scores (1 = as is)
 const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** 1.5 };
@@ -450,8 +450,8 @@ function roleFill(x, types) {
 }
 // Reroll (user 2026-11-25): Pocket Dice reroll Flyers (new Dude types) and Trinket Stashes (and relic stashes, boss
 // modifiers, the Merchant; those are left to cash or skipped, user). For an offer of three Dudes or three trinkets the
-// Draft scores everything a reroll could bring (new Dude types / unbound trinkets, uniform draw assumed: the game's
-// draw rule isn't decoded) and suggests a reroll when the expected best of a fresh three beats the best offered by
+// Draft scores everything a reroll could bring (new Dude types / unbound trinkets, each equally likely: decoded,
+// extract docs/offer_draws.md; a Flyer the player hasn't discovered yet weighs 3 in the game, not modelled) and suggests a reroll when the expected best of a fresh three beats the best offered by
 // more than a die saved is worth: the die's value at each remaining offer of either kind (the expected gain of
 // rerolling a typical offer, scored on today's build), the dice-th largest of those (0 with a die to spare).
 // Remaining offers: 5 Flyers in Act 1 (rounds 1, 3, 6, 9, 17), 5 Trinket Stashes (boss rounds 20-100, one per Dude)

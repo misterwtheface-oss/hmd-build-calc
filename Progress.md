@@ -188,13 +188,16 @@
   beats the best offered by more than a die saved is worth (user: save for later offers): the die's expected gain at
   each remaining offer (5 Flyers in Act 1, 5 Trinket Stashes), the dice-th largest, 0 with a die to spare; else Keep.
   The Reroll button spends a die and clears the offers. Memoised per state (~50-90 ms on desktop).
+- 2026-11-25 (3): Offer draws decoded (extract docs/offer_draws.md): Trinket and Relic Stashes draw every eligible
+  option equally (array_get_random), so the Draft's uniform assumption holds. Flyers are weighted: an undiscovered
+  Dude Type 3, a discovered one 1 (equal once all are discovered); a new player's first Flyer shows 2 Dudes. The
+  first decode was aimed 0x100000 low (wrong function), hence its fragments.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD done; next: Airhorn. Upper bound set during it.
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
-- [ ] Decode the game's relic offer draw (relics_get_available_ids / relic_chooser_reroll; first decompile came out as
-  fragments) and replace the uniform-draw assumption in the Draft weighting.
+- [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.
 - [ ] User audit of Function / Focus tags (extract data/code_tags_audit.md) and synergy edges; refactor as needed.
   In progress as the Dude audit (alphabetical, one Dude at a time, user analysis + code answers only, no Claude
