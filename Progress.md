@@ -192,6 +192,10 @@
   option equally (array_get_random), so the Draft's uniform assumption holds. Flyers are weighted: an undiscovered
   Dude Type 3, a discovered one 1 (equal once all are discovered); a new player's first Flyer shows 2 Dudes. The
   first decode was aimed 0x100000 low (wrong function), hence its fragments.
+- 2026-11-25 (4): Reroll advice judged on the typical result (user: one outlier, Necrodude 209 on a Viking / Psionic /
+  General + Ancient Sword build, lifted the average best of a fresh three to 25.3 while the median was 11.9): Reroll
+  when the median best of a fresh three beats the best offered by more than a saved die is worth; the line shows the
+  chance a fresh three beats the best offered ("63% better · 11.9 vs 9.3").
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's

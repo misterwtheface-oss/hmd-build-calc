@@ -451,10 +451,12 @@ function roleFill(x, types) {
 // Reroll (user 2026-11-25): Pocket Dice reroll Flyers (new Dude types) and Trinket Stashes (and relic stashes, boss
 // modifiers, the Merchant; those are left to cash or skipped, user). For an offer of three Dudes or three trinkets the
 // Draft scores everything a reroll could bring (new Dude types / unbound trinkets, each equally likely: decoded,
-// extract docs/offer_draws.md; a Flyer the player hasn't discovered yet weighs 3 in the game, not modelled) and suggests a reroll when the expected best of a fresh three beats the best offered by
-// more than a die saved is worth: the die's value at each remaining offer of either kind (the expected gain of
-// rerolling a typical offer, scored on today's build), the dice-th largest of those (0 with a die to spare).
-// Remaining offers: 5 Flyers in Act 1 (rounds 1, 3, 6, 9, 17), 5 Trinket Stashes (boss rounds 20-100, one per Dude)
+// extract docs/offer_draws.md; a Flyer the player hasn't discovered yet weighs 3 in the game, not modelled). It judges
+// a reroll on what it typically brings, not the average (user: one outlier, Necrodude at 200+, lifted the average
+// past what a reroll gives): the median best of a fresh three, and shows the chance that it beats the best offered.
+// Reroll when the typical best beats the best offered by more than a die saved is worth: at each remaining offer
+// (5 Flyers in Act 1, 5 Trinket Stashes), the mean gain of a typical reroll over a typical offer (scored on today's
+// build); the dice-th largest of those, 0 with a die to spare
 const DICE = { flyers: 5, stashes: 5 };
 // best of 3 drawn without replacement from scores: [[value, probability]] (the i-th lowest is best with C(i, 2) / C(n, 3))
 function best3(scores) {
@@ -463,8 +465,10 @@ function best3(scores) {
   const all = (n * (n - 1) * (n - 2)) / 6;
   return s.map((v, i) => [v, (i * (i - 1)) / 2 / all]);
 }
-const distMean = (d) => d.reduce((a, [v, p]) => a + v * p, 0);
-const dieValue = (d) => { const m = distMean(d); return d.reduce((a, [v, p]) => a + p * Math.max(0, m - v), 0); };
+// the median of a [[value, probability]] list sorted by value; the chance it holds a value above x
+const distMedian = (d) => { let c = 0; for (const [v, p] of d) if ((c += p) >= 0.5) return v; return d.length ? d[d.length - 1][0] : 0; };
+const distAbove = (d, x) => d.reduce((a, [v, p]) => a + (v > x ? p : 0), 0);
+const dieValue = (d) => { const m = distMedian(d); return d.reduce((a, [v, p]) => a + p * Math.max(0, m - v), 0); };
 let rrMemo = [null, null];   // [state key, advice]: scoring every possible offer is too slow to repeat on each render
 function rerollAdvice() {
   const memo = JSON.stringify([draft.build, draft.slots, draft.wield, draft.dice]);
@@ -479,7 +483,7 @@ function rerollCalc() {
   const dist = (kd) => best3((kd === "dude" ? dudesSorted.filter((d) => !d.sum && !types.includes(d.t))
     : trinketsSorted.filter((x) => !boundTo("trinket", x.id))).map((x) => overlap(x, draft.build).score));
   const here = dist(kind);
-  const exp = distMean(here), cur = Math.max(...ks.map((k) => overlap(itemOf(k), draft.build).score));
+  const med = distMedian(here), cur = Math.max(...ks.map((k) => overlap(itemOf(k), draft.build).score));
   // a die kept: what it's worth at the remaining offers (this one not counted)
   const flyers = DICE.flyers - types.length - (kind === "dude" ? 1 : 0);
   const stashes = DICE.stashes - Object.keys(draft.wield).length - (kind === "trinket" ? 1 : 0);
@@ -487,7 +491,7 @@ function rerollCalc() {
   const vt = stashes > 0 ? dieValue(kind === "trinket" ? here : dist("trinket")) : 0;
   const later = [...Array(Math.max(0, flyers)).fill(vd), ...Array(Math.max(0, stashes)).fill(vt)].sort((a, b) => b - a);
   const keep = draft.dice <= later.length ? later[draft.dice - 1] || 0 : 0;
-  return { exp, cur, gain: exp - cur, keep, go: draft.dice > 0 && exp - cur > keep };
+  return { med, cur, better: distAbove(here, cur), gain: med - cur, keep, go: draft.dice > 0 && med - cur > keep };
 }
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build, sec) {
@@ -751,7 +755,7 @@ function renderDraft() {
   // Pocket Dice: the count, and for a Flyer / Trinket Stash offer whether to spend one (rerollAdvice)
   const rr = team ? null : rerollAdvice();
   const dice = team ? "" : `<div class="dice"><span>Pocket Dice</span><button data-dice="-1" aria-label="One less">−</button><b>${draft.dice}</b><button data-dice="1" aria-label="One more">+</button>${rr && draft.dice
-    ? `<span class="rr${rr.go ? " go" : ""}">${rr.go ? "Reroll" : "Keep"} <small>${num1(rr.exp)} vs ${num1(rr.cur)}</small></span>${rr.go ? `<button class="take" data-reroll="1">Reroll</button>` : ""}` : ""}</div>`;
+    ? `<span class="rr${rr.go ? " go" : ""}">${rr.go ? "Reroll" : "Keep"} <small>${Math.round(rr.better * 100)}% better · ${num1(rr.med)} vs ${num1(rr.cur)}</small></span>${rr.go ? `<button class="take" data-reroll="1">Reroll</button>` : ""}` : ""}</div>`;
   return `${view}<div class="draft${team ? " team" : ""}"><div class="dpane">${team ? "" : `<h3>Offers</h3>${adder}${dice}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${team ? fold("build", "Build effects", effectBars(itemEffects(items, 8), true)) : section("Build effects", effectBars(itemEffects(items, 8), true))}
