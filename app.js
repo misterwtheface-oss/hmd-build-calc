@@ -385,6 +385,7 @@ const draft = (() => {
     food: Object.fromEntries(Object.entries(d?.food || {}).filter(([t, v]) => DUDE[t] && FOOD[v?.id])
       .map(([t, v]) => [t, { id: v.id, sec: FOODSTAT[v.sec] ? v.sec : null }])),
     slotSec: Array.from({ length: SLOTS }, (_, i) => (FOODSTAT[d?.slotSec?.[i]] ? d.slotSec[i] : null)),
+    dice: Number.isInteger(d?.dice) && d.dice > 0 ? d.dice : 0,   // Pocket Dice the player holds
   };
 })();
 const saveDraft = () => {
@@ -446,6 +447,47 @@ function roleFill(x, types) {
   if (!x.t || !x.er || types.includes(x.t) || types.length >= ROLE.act1) return 0;
   const need = roleNeed(types);
   return ROLE.w * (need - roleNeed([...types, x.t])) * (need / (ROLE.act1 - types.length));
+}
+// Reroll (user 2026-11-25): Pocket Dice reroll Flyers (new Dude types) and Trinket Stashes (and relic stashes, boss
+// modifiers, the Merchant; those are left to cash or skipped, user). For an offer of three Dudes or three trinkets the
+// Draft scores everything a reroll could bring (new Dude types / unbound trinkets, uniform draw assumed: the game's
+// draw rule isn't decoded) and suggests a reroll when the expected best of a fresh three beats the best offered by
+// more than a die saved is worth: the die's value at each remaining offer of either kind (the expected gain of
+// rerolling a typical offer, scored on today's build), the dice-th largest of those (0 with a die to spare).
+// Remaining offers: 5 Flyers in Act 1 (rounds 1, 3, 6, 9, 17), 5 Trinket Stashes (boss rounds 20-100, one per Dude)
+const DICE = { flyers: 5, stashes: 5 };
+// best of 3 drawn without replacement from scores: [[value, probability]] (the i-th lowest is best with C(i, 2) / C(n, 3))
+function best3(scores) {
+  const s = scores.slice().sort((a, b) => a - b), n = s.length;
+  if (n <= 3) return n ? [[s[n - 1], 1]] : [];
+  const all = (n * (n - 1) * (n - 2)) / 6;
+  return s.map((v, i) => [v, (i * (i - 1)) / 2 / all]);
+}
+const distMean = (d) => d.reduce((a, [v, p]) => a + v * p, 0);
+const dieValue = (d) => { const m = distMean(d); return d.reduce((a, [v, p]) => a + p * Math.max(0, m - v), 0); };
+let rrMemo = [null, null];   // [state key, advice]: scoring every possible offer is too slow to repeat on each render
+function rerollAdvice() {
+  const memo = JSON.stringify([draft.build, draft.slots, draft.wield, draft.dice]);
+  if (rrMemo[0] !== memo) rrMemo = [memo, rerollCalc()];
+  return rrMemo[1];
+}
+function rerollCalc() {
+  const ks = draft.slots.filter(Boolean);
+  const kind = ks.length && ks.every((k) => k.startsWith("dude:")) ? "dude" : ks.length && ks.every((k) => k.startsWith("trinket:")) ? "trinket" : null;
+  const types = [...new Set(draft.build.filter((k) => k.startsWith("dude:")))].map((k) => k.slice(5));
+  if (!kind || (kind === "dude" && types.length >= DICE.flyers)) return null;
+  const dist = (kd) => best3((kd === "dude" ? dudesSorted.filter((d) => !d.sum && !types.includes(d.t))
+    : trinketsSorted.filter((x) => !boundTo("trinket", x.id))).map((x) => overlap(x, draft.build).score));
+  const here = dist(kind);
+  const exp = distMean(here), cur = Math.max(...ks.map((k) => overlap(itemOf(k), draft.build).score));
+  // a die kept: what it's worth at the remaining offers (this one not counted)
+  const flyers = DICE.flyers - types.length - (kind === "dude" ? 1 : 0);
+  const stashes = DICE.stashes - Object.keys(draft.wield).length - (kind === "trinket" ? 1 : 0);
+  const vd = flyers > 0 ? dieValue(kind === "dude" ? here : dist("dude")) : 0;
+  const vt = stashes > 0 ? dieValue(kind === "trinket" ? here : dist("trinket")) : 0;
+  const later = [...Array(Math.max(0, flyers)).fill(vd), ...Array(Math.max(0, stashes)).fill(vt)].sort((a, b) => b - a);
+  const keep = draft.dice <= later.length ? later[draft.dice - 1] || 0 : 0;
+  return { exp, cur, gain: exp - cur, keep, go: draft.dice > 0 && exp - cur > keep };
 }
 // what an offer shares with the build:game Family, its relic pool, names / owned relics, synergy edges
 function overlap(x, build, sec) {
@@ -706,7 +748,11 @@ function renderDraft() {
   const adder = free < 0 ? "" : `<div class="adder"><div class="arow">${draft.slots.filter(Boolean).map((k) => img(itemOf(k).icon, itemOf(k).name, "aic")).join("")}
     <input id="adder" class="search" type="search" enterkeyhint="go" placeholder="Offer ${free + 1}: Dude, relic, trinket or food" autocomplete="off"></div>
     <div class="picks" id="picks"></div></div>`;
-  return `${view}<div class="draft${team ? " team" : ""}"><div class="dpane">${team ? "" : `<h3>Offers</h3>${adder}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
+  // Pocket Dice: the count, and for a Flyer / Trinket Stash offer whether to spend one (rerollAdvice)
+  const rr = team ? null : rerollAdvice();
+  const dice = team ? "" : `<div class="dice"><span>Pocket Dice</span><button data-dice="-1" aria-label="One less">−</button><b>${draft.dice}</b><button data-dice="1" aria-label="One more">+</button>${rr && draft.dice
+    ? `<span class="rr${rr.go ? " go" : ""}">${rr.go ? "Reroll" : "Keep"} <small>${num1(rr.exp)} vs ${num1(rr.cur)}</small></span>${rr.go ? `<button class="take" data-reroll="1">Reroll</button>` : ""}` : ""}</div>`;
+  return `${view}<div class="draft${team ? " team" : ""}"><div class="dpane">${team ? "" : `<h3>Offers</h3>${adder}${dice}<div class="slots">${draft.slots.map((_, i) => slotHtml(i, best, maxes)).join("")}</div>`}</div>
     <div class="dpane"><h3>Build</h3>${tiles.length
       ? `<div class="bgroups">${tiles.join("")}</div>${team ? fold("build", "Build effects", effectBars(itemEffects(items, 8), true)) : section("Build effects", effectBars(itemEffects(items, 8), true))}
         <button class="clear" data-clearbuild="1">Clear build</button>`
@@ -975,7 +1021,7 @@ document.addEventListener("click", (e) => {
     window.scrollTo(0, y);
     return;
   }
-  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hbind],[data-fsec],[data-give]");
+  const dr = e.target.closest("[data-pick],[data-take],[data-unslot],[data-unbuild],[data-clearbuild],[data-offer],[data-toggle],[data-dview],[data-hbind],[data-fsec],[data-give],[data-dice],[data-reroll]");
   if (dr) {
     const ds = dr.dataset;
     if (ds.pick) offer(ds.pick);
@@ -1010,6 +1056,13 @@ document.addEventListener("click", (e) => {
       draft.slotSec[+i] = draft.slotSec[+i] === st ? null : st;
     }
     else if (ds.dview) draft.view = ds.dview;
+    else if (ds.dice) draft.dice = Math.max(0, draft.dice + +ds.dice);
+    else if (ds.reroll) {
+      // a die spent: the three offers leave, the rerolled ones are entered next
+      draft.dice = Math.max(0, draft.dice - 1);
+      draft.slots.fill(null);
+      draft.slotSec.fill(null);
+    }
     else if (ds.toggle) {
       // a picked relic leaves the build entirely (every copy), an unpicked one joins it
       if (draft.build.includes(ds.toggle)) draft.build = draft.build.filter((k) => k !== ds.toggle);

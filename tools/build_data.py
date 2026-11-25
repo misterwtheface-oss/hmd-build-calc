@@ -119,6 +119,8 @@ def main():
     roles = {t: [GR["role_names"][r] for r in v["roles"]] for t, v in GR["dudes"].items()}
     # Effect role (extract tools/effect_roles.py, user 2026-11-25): [primary, secondary or null] for Draft role fill
     ER = json.load(open(os.path.join(X, "data", "effect_roles.json"), encoding="utf-8"))["dudes"]
+    # summons (DudeType.temporary, extract data/dude_temporary.json) are never offered as a new Dude type
+    TEMP = json.load(open(os.path.join(X, "data", "dude_temporary.json"), encoding="utf-8"))["temporary"]
     CT = json.load(open(os.path.join(X, "data", "code_tags.json"), encoding="utf-8"))["effects"]
     fn = lambda k: [CT[k]["function"], CT[k]["focus"]] if CT.get(k, {}).get("function") else None
 
@@ -132,6 +134,7 @@ def main():
                       "roles": roles.get(d["type"], []), "fn": fn("dude:" + d["type"]),
                       **({"er": [ER[d["type"]]["primary"], ER[d["type"]]["secondary"]]}
                          if ER.get(d["type"], {}).get("primary") else {}),
+                      **({"sum": 1} if d["type"] in TEMP else {}),
                       # base stats (extract tools/dude_stats_map.py), in the game's own format
                       "stats": [[s["name"], s["text"]] for s in d.get("stats", [])],
                       "icon": icon(a["sprite"], "dude " + d["type"], a["provenance"])})

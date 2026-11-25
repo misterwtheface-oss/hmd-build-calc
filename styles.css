@@ -257,6 +257,13 @@ html.kb .adder .search { padding: 6px 10px; }
 .mini .fams { margin-left: auto; display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
 .mini .fams img { width: 18px; height: 18px; flex: 0 0 18px; }
 .ovl img { width: 20px; height: 20px; }
+.dice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font: 15px var(--narrow); color: var(--olive); }
+.dice button:not(.take) { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: inherit; font: 18px var(--narrow); cursor: pointer; }
+.dice b { min-width: 1.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--cream); }
+.dice .rr { margin-left: auto; }
+.dice .rr.go { color: var(--mustard); }
+.dice .rr small { font-variant-numeric: tabular-nums; }
+.dice .take { width: 100%; margin-top: 0; }
 .ovl b { color: var(--cream); font: 14px var(--narrow); min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; }
 .hold { margin: 6px 0 8px; padding-left: 8px; border-left: 2px solid var(--line); }
 .hhead { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; font: 15px var(--narrow); color: var(--cream); text-align: left; }

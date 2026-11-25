@@ -181,6 +181,13 @@
   (Act 1 brings five) adds 40 x the share of missing roles it fills x (missing / type picks left); shown as "Fills
   <role>" on the offer. Dude page: Effect role line. Simulated: Act 1 teams with all four roles 17% -> 54% (ceiling
   57% with three random Dudes per offer), synergy unchanged.
+- 2026-11-25 (2): Pocket Dice (user: dice are best spent rerolling Flyers and Trinket Stashes; the Merchant can be
+  restocked with cash, relic stashes are left alone). Draft Offers: a Pocket Dice count (- / +). For three Dude or
+  three trinket offers it scores everything a reroll could bring (new Dude types, summons excluded / unbound
+  trinkets scored on the free Dudes; uniform draw assumed), and shows Reroll when the expected best of a fresh three
+  beats the best offered by more than a die saved is worth (user: save for later offers): the die's expected gain at
+  each remaining offer (5 Flyers in Act 1, 5 Trinket Stashes), the dice-th largest, 0 with a die to spare; else Keep.
+  The Reroll button spends a die and clears the offers. Memoised per state (~50-90 ms on desktop).
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
