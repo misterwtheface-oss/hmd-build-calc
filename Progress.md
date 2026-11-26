@@ -123,6 +123,10 @@
   secondary = next if it reaches 3 (extract tools/effect_roles.py); 22 Dudes now have a secondary (was 5). Simulated
   drafts: Act 1 teams with every role covered 78% (was 54% on the game's roles); report extract
   docs/role_functions_2026-11-26.md.
+- 2026-11-26 (3): Top trinkets cap by the trinket's own score (user, Baseball Bat revisit): a full trinket (10 Dudes)
+  keeps the Dudes who score it highest; the lowest moves to his next choice (extract held_picks.py assign(), deferred
+  acceptance, then the floor of 2). Alien no longer holds the Bat (0.94, one Probe link); Ghost does (2.57). 7 Dudes
+  changed; extract docs/held_picks_audit.md § Baseball Bat.
 
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
