@@ -8,61 +8,10 @@
   view, Dude base stats, pool-odds weighting, first Dude audits; detail in
   [Progress_2026-11-19_to_23.md](Progress_2026-11-19_to_23.md).
 
-- 2026-11-24: Dude page base stats carry a bar each (share of that stat's largest value among all Dudes; Draft
-  team-view totals stay bare). Effect edges bar higher-order groups (Damage, Crit, Defense, Health, Mobility, Summons:
-  EDGE_GROUPS in app.js) by how many of his ability + relics touch each, with that group's facet chips under the bar
-  (tap opens the channel): 540 -> 180 bars over 53 Dudes, bars at 1: 427 -> 45. Role: / Function: labels before chips.
-  Function rows: one per primary Function, its name once ("Support:") then each Focus chip with ×n.
-- 2026-11-24 (2): Dude page reorder (user): hero = icon | name + Family chip / Role: chips; stats; Effect functions
-  (one row per Function); Effect edges: each group bar (n = effects touching it) has two folds under it, closed by
-  default, side by side: Producer (Gives / Triggers) and Consumer (Scales / On / Boosts) chips; Intrinsic effect;
-  Relics; Synergy Dudes / relics; Indirect synergies; Family (chip + its Dudes); Names / Named by kept at the end.
-  Relic priority: the user's order per Dude from the audit, _hmd_extract/data/relic_priority.json -> relic pr ->
-  relics sorted with #n on the card; empty so far (Agent, Alien to backfill).
-- 2026-11-24 (3): Indirect synergies list only chains that end at the page's own effects (what boosts him:
-  Evasion -> Golden Glove -> Hit -> Probe), not the chains he starts for others (user). All pages (Dude, relic,
-  trinket, food). Alien 319 -> 51 rows; all Dudes 6615 -> 3241; 20 Dudes have none.
-  Grouped under the own effect each chain feeds (icon + ability / relic name header), in his kit order; one row per
-  linking effect: [Golden Glove] Triggers Hit from Gives Evasion, the chips open the channel pages instead of
-  listing every provider (user). Alien 51 rows -> 4.
-- 2026-11-24 (4): Dude page: Top trinkets and Top food sections after Relics, 4 each with #1-#4, from the extract's
-  data/held_picks.json -> dude picks {tr, fd} (build_data warns on an unknown id). DRAFT: Claude's broad pass for 50
-  Dudes (no Echo / Skeledude / Streaker) from ability + relics + base stats, a why line per Dude in the file; main
-  dishes only (no extra-stat pick yet). User refines.
-- 2026-11-24 (5): held picks rules (user): purpose = weight trinket offers toward a present Dude (5 Dudes, one
-  trinket each, limited rerolls; the offer still weighs every other relic). Every trinket in at least 2 Dudes' top 4
-  (lower bound, met: 32/32); upper bound to be set. Method: per Dude vs all trinkets, then per trinket vs all Dudes.
-  Rulings: Baseball Bat = a Direct Crit every 3s, on every On Hit / On Crit kit (28 lists); Shovel = Zombie +
-  Frankendude (Lich dropped); Fedora = Max HP + Attack Power payoffs with no relic needing copies (Manager,
-  Construction, Druid; more candidates in the screen). Code: Fedora walks Roster order, which skips summon types;
-  the knocked-out count Shovel / Organ Bucket read skips summons (dude_knock_out, roster_refresh_num_unconscious_dudes).
-- 2026-11-24 (6): Trinket and food pages: Recommended on section (one shared pickedBy), the Dudes whose top 4 hold it,
-  one row per placement #1-#4 (empty placements skipped); for the user's per-trinket review before the upper bound.
-- 2026-11-24 (7): Distance Traveled synergy channel (user): the six "X feet he travels" effects scale with it, fed by
-  Run Speed and every Dash (Tractor Beam, Lasso, Blitz too); code: position delta per step, so Dashes count (extract
-  docs/effect_tagging.md). 155 links. Held picks: ADHD #1 for Electrician (Fuzzy Socks: Dash + Run Speed twice).
-- 2026-11-24 (8): Run Speed dropped as a Distance Traveled provider (user: it does not add distance travelled; Dash
-  does). Channel now Dash only: 48 links. Fuzzy Socks keeps its own Run Speed link, so ADHD still pays twice (user).
-- 2026-11-24 (9): Teleport and Thrown added as Distance Traveled sources from code: teleports count in full (38 links);
-  a throw stuns at launch, so it counts for River Raft, Wave Function, Cutoff Jorts and Taser but not Fuzzy Socks or
-  Spell Book, and Ground Wire / Mag Boots clear the stun only on landing (4 links: Electrician's own throws). 90 links.
-- 2026-11-24 (10): Top trinkets / Recommended on now come from a function (user: code-backed, never a hand list):
-  extract tools/held_picks.py --assign --write. Score = the Draft's log weighting over wield links (ability link 1,
-  relic link = pool odds), each Dude's top 4, every trinket on 2-10 Dudes (upper bound "for now"); summons
-  (DudeType.temporary) get none. Soccer Dude's Shot tagged as Direct Damage from code (links him to On Hit effects).
-  Food picks still the draft list.
-- 2026-11-24 (11): Back keeps your place: a page reached by Back (or the phone's back) returns to where you left it
-  scrolled (Dude page -> linked trinket -> Back lands at the same spot); a newly opened page starts at the top. The
-  scroll is stored on the history entry (app.js open() / route()).
-- 2026-11-24 (12): Draft weighting = grow, rare 2 (user: overlaps should gain value as the build's focus forms, the
-  Venn centre). A channel scores rarity^2 x (summed pair weights)^1.5, so each overlap adds more than the last;
-  rarity^2 keeps the focus off generic stats, which have the most overlaps. Gated effects (user): a facet in a
-  sentence that opens with a condition ("When X, ...") weighs the odds X is open: per gate, the summed weights of the
-  build's effects that open it, capped at 1 (extract effect_tags gates / gate_src, AMBIENT = Hit, Hit Taken, Fatal
-  Damage, Knock Out, Thrown, Cleaved always open (user 2026-11-25: thrown / cleaved happen naturally in a fight); a gate the effect opens itself counts open). Simulated drafts (200, gate-aware
-  measure): Families 4.9 -> 4.0, top-3 channel share 68% -> 70%, builds led by Attack Power / DPS / Damage Dealt
-  22% -> 8%. Trinket picks regenerated with the same formula (extract tools/held_picks.py reads mode, rare, grow from
-  app.js).
+- 2026-11-24: Dude page reorder + base stat bars, Top trinkets / food and Recommended on (held picks from a
+  function over code tags), Distance Traveled channel, Back keeps your place, Draft weighting grow / rare 2; detail in
+  [Progress_2026-11-24.md](Progress_2026-11-24.md).
+
 - 2026-11-25 (1): Draft role fill (user: early deaths come from teams missing a role, most of all recovery). Effect
   role per Dude, Tank / DPS / Healer / Support (Healer split from Support, user), primary + optional secondary (half);
   set in the Dude audit, until then mapped from the game's DudeType.roles (extract tools/effect_roles.py ->
@@ -128,7 +77,7 @@
   acceptance, then the floor of 2). Alien no longer holds the Bat (0.94, one Probe link); Ghost does (2.57). 7 Dudes
   changed; extract docs/held_picks_audit.md § Baseball Bat.
 
-- 2026-11-26 (3): Debuffs split by what they do (user): enemies take more damage = Offense · Debuff, enemies deal less
+- 2026-11-26 (4): Debuffs split by what they do (user): enemies take more damage = Offense · Debuff, enemies deal less
   = Support · Debuff. Read from code (the enemy buff's stats, Toxin's buff = Attack Power down, the effect's variable
   names; extract tools/code_tags.py debuff_side): 12 Support, 5 Offense, 3 mixed kept Offense until ruled (Veneers,
   Psychic Hood, Saddle Horn). Roles moved: Assassin gains secondary Support, Explorer gains Support, Vampire loses
@@ -144,7 +93,7 @@ Intercept Damage, less own Evade / Deflect / Block; self vs ally damage stores);
 gated by the chance; own-roll outputs weighed by uptime); Baseball Bat, Black Belt, Bongos done 2026-11-25 (every
 Direct hit source weighed in hits per second, held_picks.py --rates; Bongos floor 1); Crazy Straw done 2026-11-25 (own-roll uptime also for a self-given chance stat, plus the Dude's own
 Lifesteal; Tennis out; thin holders Cave / Football / Cowboy revisit at audit end); Cutoff Jorts done 2026-11-25 (Dash target kind
-from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 on distance links); Diss Track done 2026-11-25 (damage sources + sizes in one unit, extract data/scoring_config.json); Ear Gauges 2026-11-26 (Tank trinket like Bad Credit: Damage Taken + own-save detractor; knockout full heals x0.1 as Healing; Knock Out saves tagged from code, extract tools/ko_saves.py; pending user sign-off); next: Face Tattoo. Bounds 2-10 Dudes per trinket (upper "for now").
+from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 on distance links); Diss Track done 2026-11-25 (damage sources + sizes in one unit, extract data/scoring_config.json); Ear Gauges 2026-11-26 (Tank trinket like Bad Credit: Damage Taken + own-save detractor; knockout full heals x0.1 as Healing; Knock Out saves tagged from code, extract tools/ko_saves.py; done, Farmer source check / per-source boosts / 12 s heal rate left as is); next: Face Tattoo. Bounds 2-10 Dudes per trinket (upper "for now").
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
