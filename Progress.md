@@ -111,7 +111,8 @@ Intercept Damage, less own Evade / Deflect / Block; self vs ally damage stores);
 (Direct hit reactions sorted per hit / per damage / once by tools/hit_kind.py; On Direct Crit / On Lifesteal fed by hit rate
 gated by the chance; own-roll outputs weighed by uptime); Baseball Bat, Black Belt, Bongos done 2026-11-25 (every
 Direct hit source weighed in hits per second, held_picks.py --rates; Bongos floor 1); Crazy Straw done 2026-11-25 (own-roll uptime also for a self-given chance stat, plus the Dude's own
-Lifesteal; Tennis out; thin holders Cave / Football / Cowboy revisit at audit end); next: Cutoff Jorts. Bounds 2-10 Dudes per trinket (upper "for now").
+Lifesteal; Tennis out; thin holders Cave / Football / Cowboy revisit at audit end); Cutoff Jorts done 2026-11-25 (Dash target kind
+from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 on distance links); next: Diss Track. Bounds 2-10 Dudes per trinket (upper "for now").
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
