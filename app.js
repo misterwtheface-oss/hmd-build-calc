@@ -478,15 +478,26 @@ const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
 // else mapped from the game's DudeType.roles); his primary fills a role, his secondary half; a role needs 1
 // (w 40, user ask 2026-11-25: tools/weight_preview.js, Act 1 teams with all four roles 17% -> 54%; the ceiling with
 // three random Dudes per offer is 57%, synergy unchanged)
-const ROLE = { w: 40, act1: 5, roles: ["Tank", "DPS", "Healer", "Support"] };
-const roleNeed = (types) => ROLE.roles.reduce((a, r) => a + 1 - Math.min(1, types.reduce((s, t) => {
+// Staged (user 2026-11-26: role fill weighed too high early, crowding out shared mechanics): stage = the role weight
+// per pick, indexed by Dude types already held (1 = the 2nd Dude); picks 2-3 let synergy set the build's focus, picks
+// 4-5 make sure every role has at least a secondary: a late pick scores both needs, the role covered at all (a
+// secondary is enough) and the role filled by a primary. stage null = the flat w x urgency rule above. 0/3/3/40/100
+// (tools/weight_preview.js, 300 drafts): role fill overrules synergy on the 2nd / 3rd Dude 14% / 9% (was 35% / 33%),
+// Act 1 teams with every role covered 54% (was 62%); late weights past 20/40 change little (the three offered Dudes cap it)
+const ROLE = { w: 40, act1: 5, roles: ["Tank", "DPS", "Healer", "Support"], stage: [0, 3, 3, 40, 100], late: 3 };
+const roleNeed = (types, full = 1) => ROLE.roles.reduce((a, r) => a + (full - Math.min(full, types.reduce((s, t) => {
   const er = DUDE[t]?.er || [];
   return s + (er[0] === r ? 1 : er[1] === r ? 0.5 : 0);
-}, 0)), 0);
+}, 0))) / full, 0);
 function roleFill(x, types) {
   if (!x.t || !x.er || types.includes(x.t) || types.length >= ROLE.act1) return 0;
-  const need = roleNeed(types);
-  return ROLE.w * (need - roleNeed([...types, x.t])) * (need / (ROLE.act1 - types.length));
+  const after = [...types, x.t];
+  if (!ROLE.stage) {
+    const need = roleNeed(types);
+    return ROLE.w * (need - roleNeed(after)) * (need / (ROLE.act1 - types.length));
+  }
+  const gain = roleNeed(types) - roleNeed(after) + (types.length >= ROLE.late ? roleNeed(types, 0.5) - roleNeed(after, 0.5) : 0);
+  return (ROLE.stage[types.length] || 0) * gain;
 }
 // Reroll (user 2026-11-25): Pocket Dice reroll Flyers (new Dude types) and Trinket Stashes (and relic stashes, boss
 // modifiers, the Merchant; those are left to cash or skipped, user). For an offer of three Dudes or three trinkets the

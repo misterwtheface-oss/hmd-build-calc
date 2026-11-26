@@ -110,6 +110,13 @@
   (Bone Axe) no longer count for the Necrodude. All assumptions in extract data/scoring_config.json. Recommended on
   and Top trinkets rebuilt: 31 of 49 Dudes changed.
 
+- 2026-11-26: Draft role fill staged by pick (user: it weighed too high early, crowding out shared mechanics).
+  Role weight per Dude pick 0/3/3/40/100 (app.js ROLE.stage): the 2nd and 3rd Dude are chosen mostly on synergy, the
+  4th and 5th must cover every role, a secondary counting as covered (a primary still scores more). 300 simulated
+  drafts (tools/weight_preview.js; report extract docs/role_stage_2026-11-26.md): role fill overrules synergy on the
+  2nd / 3rd Dude 14% / 9% (was 35% / 33%); Act 1 teams with every role covered 54% (was 62%). Only 5 of 50 Dudes
+  have a secondary role, all mapped from code; none audited yet.
+
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD, Airhorn done (2026-11-25: Regular Dude excluded like summons; AoE gap

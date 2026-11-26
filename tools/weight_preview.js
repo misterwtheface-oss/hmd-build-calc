@@ -22,15 +22,17 @@ const A = ctx.__app;
 const RUNS = +process.argv[2] || 200, DUDE_OFFERS = 10, RELIC_OFFERS = 14;
 // live = app.js WEIGHT as shipped; the others change one option each (user 2026-11-25: keep A / B handy, see them
 // on other builds). A = dedupe2, B = growOn "build", exp = the grow curve's power
-const LIVE = { mode: "grow", seen: 25, rare: 2, role: 40, exp: 1.5, dedupe2: true, growOn: "build" };
+const LIVE = { mode: "grow", seen: 25, rare: 2, role: 40, stage: [0, 3, 3, 40, 100], exp: 1.5, dedupe2: true, growOn: "build" };
 const VARIANTS = [
-  { name: "Live: A + B (user pick 2026-11-25)", ...LIVE },
-  { name: "Before: no A, no B", ...LIVE, dedupe2: false, growOn: "pairs" },
-  { name: "A only", ...LIVE, growOn: "pairs" },
-  { name: "B only", ...LIVE, dedupe2: false },
-  { name: "A + B, gentler curve w^1.25", ...LIVE, exp: 1.25 },
+  { name: "Live: staged role fill 0/3/3/40/100 (user 2026-11-26)", ...LIVE },
+  { name: "Staged 0/6/6/30/60", ...LIVE, stage: [0, 6, 6, 30, 60] },
+  { name: "Before: flat role fill w 40 x urgency", ...LIVE, stage: null },
+  { name: "No role fill", ...LIVE, stage: [0, 0, 0, 0, 0] },
+  { name: "Staged softer 0/3/3/20/40", ...LIVE, stage: [0, 3, 3, 20, 40] },
+  { name: "Soft early, very hard late 0/3/3/80/200", ...LIVE, stage: [0, 3, 3, 80, 200] },
+  { name: "Staged harder 0/10/10/40/100", ...LIVE, stage: [0, 10, 10, 40, 100] },
 ];
-const setV = (v) => { Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1, exp: v.exp ?? 1.5, dedupe2: !!v.dedupe2, growOn: v.growOn || "pairs" }); A.ROLE.w = v.role ?? 40; };
+const setV = (v) => { Object.assign(A.WEIGHT, { mode: v.mode, seen: v.seen, rare: v.rare ?? 1, exp: v.exp ?? 1.5, dedupe2: !!v.dedupe2, growOn: v.growOn || "pairs" }); A.ROLE.w = v.role ?? 40; A.ROLE.stage = v.stage === undefined ? LIVE.stage : v.stage; };
 const rng = (seed) => () => ((seed = (seed + 0x6d2b79f5) | 0), (((seed ^ (seed >>> 15)) * (1 | seed)) >>> 0) / 4294967296);
 const dudes = A.H.dudes.filter((d) => d.name && !d.sum).map((d) => "dude:" + d.t);   // summons are never offered
 const pick = (r, arr, n) => { const a = arr.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
@@ -39,7 +41,17 @@ function pool(build) {
   const rs = [...A.relicsOfSource("universal"), ...A.buildFams(team).flatMap(A.relicsOfFamilyPool), ...team.flatMap((d) => A.relicsOfDude(d.t))];
   return rs.map((r) => "relic:" + r.id).filter((k) => !build.includes(k));
 }
-const choose = (build, opts) => opts.map((k) => [k, A.overlap(A.itemOf(k), build).score]).sort((a, b) => b[1] - a[1])[0][0];
+// FLIP[n]: Dude picks where role fill changed the choice (vs synergy alone), by Dude number n (2nd .. 5th)
+let FLIP = {};
+const choose = (build, opts) => {
+  const sc = opts.map((k) => { const o = A.overlap(A.itemOf(k), build); return [k, o.score, o.score - o.role]; });
+  const top = sc.slice().sort((a, b) => b[1] - a[1])[0][0];
+  if (opts[0].startsWith("dude:")) {
+    const n = new Set(build.filter((k) => k.startsWith("dude:"))).size + 1, f = (FLIP[n] ||= [0, 0]);
+    f[1]++; if (top !== sc.slice().sort((a, b) => b[2] - a[2])[0][0]) f[0]++;
+  }
+  return top;
+};
 
 function simulate(v, seed, stopAt) {
   setV(v);
@@ -54,7 +66,7 @@ function simulate(v, seed, stopAt) {
 }
 // the finished build: synergy pairs among what it actually holds (Dude abilities, picked relics), each once,
 // times the copies on each side (a second Mummy Dude fires his ability again)
-function measure(build) {
+function measure(build, shallow) {
   const have = new Set(build);
   const n = {};
   for (const k of build) n[k] = (n[k] || 0) + 1;
@@ -75,7 +87,9 @@ function measure(build) {
   const top = Object.entries(chMass).sort((a, b) => b[1] - a[1]);
   // Act 1 team: the first ROLE.act1 Dude types drafted; roles = how many of the four it fills (a secondary = half)
   const act1 = [...new Set(build.filter((k) => k.startsWith("dude:")).map((k) => k.slice(5)))].slice(0, A.ROLE.act1);
-  return { roles: A.ROLE.roles.length - A.roleNeed(act1), allRoles: A.roleNeed(act1) === 0 ? 1 : 0, types: team.length, fams: A.buildFams(team).length, relics: relics.length, mass,
+  // early: synergy among the first five picks (3 Dudes, 2 relics), the focus the build has formed by then
+  const m3 = shallow ? 0 : measure(build.slice(0, 5), true).mass;
+  return { roles: A.ROLE.roles.length - A.roleNeed(act1), allRoles: A.roleNeed(act1) === 0 ? 1 : 0, cover: A.roleNeed(act1, 0.5) === 0 ? 1 : 0, early: m3, types: team.length, fams: A.buildFams(team).length, relics: relics.length, mass,
     perPick: mass / build.length, top3: mass ? top.slice(0, 3).reduce((a, c) => a + c[1], 0) / mass : 0,
     dead: relics.length ? relics.filter((k) => !live.has(k)).length / relics.length : 0, topCh: top.slice(0, 3).map((c) => c[0]) };
 }
@@ -83,14 +97,18 @@ const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const f1 = (x) => x.toFixed(1), pct = (x) => Math.round(100 * x) + "%";
 
 const lines = [`# Draft weighting preview (${RUNS} simulated drafts per variant, ${DUDE_OFFERS} Dude + ${RELIC_OFFERS} relic offers, always taking the top score)`, ""];
-lines.push("| Variant | Act 1 all 4 roles | Act 1 roles filled | Dude types | Families | Synergy in build | Synergy per pick | Top 3 channels' share | Relics with no partner |", "|---|---|---|---|---|---|---|---|---|");
+lines.push("| Variant | Act 1 all 4 roles covered (a secondary counts) | Act 1 all 4 by primary | Act 1 roles filled | Synergy after 5 picks | Dude types | Families | Synergy in build | Synergy per pick | Top 3 channels' share | Relics with no partner |", "|---|---|---|---|---|---|---|---|---|---|---|");
 const results = {};
 for (const v of VARIANTS) {
   const ms = [];
+  FLIP = {};
   for (let s = 1; s <= RUNS; s++) ms.push(measure(simulate(v, s)));
+  v.flip = [2, 3, 4, 5].map((n) => (FLIP[n] ? pct(FLIP[n][0] / FLIP[n][1]) : "-")).join(" / ");
   results[v.name] = ms;
-  lines.push(`| ${v.name} | ${pct(avg(ms.map((m) => m.allRoles)))} | ${f1(avg(ms.map((m) => m.roles)))} | ${f1(avg(ms.map((m) => m.types)))} | ${f1(avg(ms.map((m) => m.fams)))} | ${f1(avg(ms.map((m) => m.mass)))} | ${f1(avg(ms.map((m) => m.perPick)))} | ${pct(avg(ms.map((m) => m.top3)))} | ${pct(avg(ms.map((m) => m.dead)))} |`);
+  lines.push(`| ${v.name} | ${pct(avg(ms.map((m) => m.cover)))} | ${pct(avg(ms.map((m) => m.allRoles)))} | ${f1(avg(ms.map((m) => m.roles)))} | ${f1(avg(ms.map((m) => m.early)))} | ${f1(avg(ms.map((m) => m.types)))} | ${f1(avg(ms.map((m) => m.fams)))} | ${f1(avg(ms.map((m) => m.mass)))} | ${f1(avg(ms.map((m) => m.perPick)))} | ${pct(avg(ms.map((m) => m.top3)))} | ${pct(avg(ms.map((m) => m.dead)))} |`);
 }
+lines.push("", "Dude picks where role fill overruled synergy (2nd / 3rd / 4th / 5th Dude):", "");
+for (const v of VARIANTS) lines.push(`- ${v.name}: ${v.flip}`);
 // what each variant's builds focus on (most common top channel)
 lines.push("", "Most common lead channel of a finished build:", "");
 for (const v of VARIANTS) {
