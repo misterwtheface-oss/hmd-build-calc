@@ -114,7 +114,7 @@ const hasRole = (d, r) => d.roles.includes(r);
 const fnText = (x) => (x.fn ? x.fn.join(" · ") : "");
 // display order: by Function, then Focus, in taxonomy order
 const FN_ORDER = ["Offense · Single", "Offense · Area", "Offense · Debuff", "Offense · Self-Scaling", "Defense · Taunt",
-  "Defense · Mitigation", "Support · Protection", "Support · Buff", "Healing · Heal", "Utility · Summon",
+  "Defense · Mitigation", "Support · Protection", "Support · Buff", "Support · Debuff", "Healing · Heal", "Utility · Summon",
   "Utility · Economy", "Utility · Reposition"];
 const fnRank = (x) => (FN_ORDER.indexOf(fnText(x)) + FN_ORDER.length + 1) % (FN_ORDER.length + 1);
 
