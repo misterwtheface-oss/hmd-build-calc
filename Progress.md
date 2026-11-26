@@ -82,6 +82,10 @@
   names; extract tools/code_tags.py debuff_side): 12 Support, 5 Offense, 3 mixed kept Offense until ruled (Veneers,
   Psychic Hood, Saddle Horn). Roles moved: Assassin gains secondary Support, Explorer gains Support, Vampire loses
   Offense.
+- 2026-11-26 (5): Top trinkets lower bound removed (user; was 2 per trinket, plus Bongos floor 1): extract
+  data/scoring_config.json picks.lower 0, floor cleared. Friendship Bracelet (Lich), Laser Pointer (Alien), Socialism
+  (Knight), Weighted Vest (Ghost) now sit on one Dude; Vampire, Cleric (x2), Broadcaster get back the pick the floor
+  displaced (only Vampire's cost anything, 2.67). Every trinket still on at least one Dude.
 
 ## Open
 - [ ] Mixed debuffs (both sides): Veneers, Psychic Hood, Saddle Horn stay Offense (user 2026-11-26) until each one's Dude audit (Football, Psionic, Cowboy); extract tools/code_tags.py debuff_side.
@@ -93,7 +97,7 @@ Intercept Damage, less own Evade / Deflect / Block; self vs ally damage stores);
 gated by the chance; own-roll outputs weighed by uptime); Baseball Bat, Black Belt, Bongos done 2026-11-25 (every
 Direct hit source weighed in hits per second, held_picks.py --rates; Bongos floor 1); Crazy Straw done 2026-11-25 (own-roll uptime also for a self-given chance stat, plus the Dude's own
 Lifesteal; Tennis out; thin holders Cave / Football / Cowboy revisit at audit end); Cutoff Jorts done 2026-11-25 (Dash target kind
-from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 on distance links); Diss Track done 2026-11-25 (damage sources + sizes in one unit, extract data/scoring_config.json); Ear Gauges 2026-11-26 (Tank trinket like Bad Credit: Damage Taken + own-save detractor; knockout full heals x0.1 as Healing; Knock Out saves tagged from code, extract tools/ko_saves.py; done, Farmer source check / per-source boosts / 12 s heal rate left as is); next: Face Tattoo. Bounds 2-10 Dudes per trinket (upper "for now").
+from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 on distance links); Diss Track done 2026-11-25 (damage sources + sizes in one unit, extract data/scoring_config.json); Ear Gauges 2026-11-26 (Tank trinket like Bad Credit: Damage Taken + own-save detractor; knockout full heals x0.1 as Healing; Knock Out saves tagged from code, extract tools/ko_saves.py; done, Farmer source check / per-source boosts / 12 s heal rate left as is); next: Face Tattoo. Bounds 0-10 Dudes per trinket (lower removed 2026-11-26, upper "for now").
 - [ ] User check on a real phone: the keyboard stays up between Draft offer picks (tested headless only).
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
