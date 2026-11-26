@@ -114,7 +114,7 @@ const hasRole = (d, r) => d.roles.includes(r);
 const fnText = (x) => (x.fn ? x.fn.join(" · ") : "");
 // display order: by Function, then Focus, in taxonomy order
 const FN_ORDER = ["Offense · Single", "Offense · Area", "Offense · Debuff", "Offense · Self-Scaling", "Defense · Taunt",
-  "Defense · Mitigation", "Support · Heal", "Support · Protection", "Support · Buff", "Utility · Summon",
+  "Defense · Mitigation", "Support · Protection", "Support · Buff", "Healing · Heal", "Utility · Summon",
   "Utility · Economy", "Utility · Reposition"];
 const fnRank = (x) => (FN_ORDER.indexOf(fnText(x)) + FN_ORDER.length + 1) % (FN_ORDER.length + 1);
 
@@ -474,8 +474,8 @@ const poolSize = (types, fams) => relicsOfSource("universal").length + fams.redu
 const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
 // Role fill (user 2026-11-25): a Dude offer of a new type, while the team has fewer than act1 types (Act 1 brings
 // five: new types on rounds 1, 3, 6, 9, 17), scores w x the share of the missing roles it fills x urgency (missing
-// roles / type picks left). Roles: each Dude's Effect role (extract data/effect_roles.json: the user's audit ruling,
-// else mapped from the game's DudeType.roles); his primary fills a role, his secondary half; a role needs 1
+// roles / type picks left). Roles = our Functions less Utility (user 2026-11-26): each Dude's Effect role (extract
+// data/effect_roles.json: the user's audit ruling, else scored from his ability's and own relics' Functions); his primary fills a role, his secondary half; a role needs 1
 // (w 40, user ask 2026-11-25: tools/weight_preview.js, Act 1 teams with all four roles 17% -> 54%; the ceiling with
 // three random Dudes per offer is 57%, synergy unchanged)
 // Staged (user 2026-11-26: role fill weighed too high early, crowding out shared mechanics): stage = the role weight
@@ -484,7 +484,7 @@ const poolOdds = (n) => Math.min(1, WEIGHT.seen / n);
 // secondary is enough) and the role filled by a primary. stage null = the flat w x urgency rule above. 0/3/3/40/100
 // (tools/weight_preview.js, 300 drafts): role fill overrules synergy on the 2nd / 3rd Dude 14% / 9% (was 35% / 33%),
 // Act 1 teams with every role covered 54% (was 62%); late weights past 20/40 change little (the three offered Dudes cap it)
-const ROLE = { w: 40, act1: 5, roles: ["Tank", "DPS", "Healer", "Support"], stage: [0, 3, 3, 40, 100], late: 3 };
+const ROLE = { w: 40, act1: 5, roles: ["Offense", "Defense", "Support", "Healing"], stage: [0, 3, 3, 40, 100], late: 3 };
 const roleNeed = (types, full = 1) => ROLE.roles.reduce((a, r) => a + (full - Math.min(full, types.reduce((s, t) => {
   const er = DUDE[t]?.er || [];
   return s + (er[0] === r ? 1 : er[1] === r ? 0.5 : 0);

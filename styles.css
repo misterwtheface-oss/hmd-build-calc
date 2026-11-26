@@ -6,6 +6,8 @@
   --line: #5b5769;     /* slate */
   --cream: #ebe8d0;
   --olive: #b6b377;
+  --defense: #d6cb5c;  /* Function Defense: yellower than olive (user 2026-11-26) */
+  --green: #86b45e;    /* Function Healing (user 2026-11-26) */
   --teal: #78aea2;
   --mustard: #e0ac44;
   --brick: #d25d4b;
@@ -109,8 +111,9 @@ h2 .tag { margin-left: 8px; vertical-align: middle; }
 .tag.fn b { font-weight: 400; margin-left: 4px; opacity: .8; font-variant-numeric: tabular-nums; }
 .tag.fn { --c: var(--sage); background: transparent; color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
 .tag.fn-Offense { --c: var(--brick); }
-.tag.fn-Defense { --c: var(--olive); }
+.tag.fn-Defense { --c: var(--defense); }
 .tag.fn-Support { --c: var(--teal); }
+.tag.fn-Healing { --c: var(--green); }
 .tag.fn-Utility { --c: var(--mustard); }
 
 .overlay { position: fixed; inset: 0; z-index: 20; background: rgba(10, 6, 8, .6); display: flex; justify-content: center; }
@@ -262,8 +265,9 @@ html.kb .adder .search { padding: 6px 10px; }
 
 .role .fnhead { font: 13px var(--narrow); align-self: center; }
 .tags.fn-Offense .fnhead { color: var(--brick); }
-.tags.fn-Defense .fnhead { color: var(--olive); }
+.tags.fn-Defense .fnhead { color: var(--defense); }
 .tags.fn-Support .fnhead { color: var(--teal); }
+.tags.fn-Healing .fnhead { color: var(--green); }
 .tags.fn-Utility .fnhead { color: var(--mustard); }
 .eff.grp .chipline { gap: 4px; margin: 2px 0 4px; font-size: 13px; }
 .effects.big .eff.grp { cursor: default; }

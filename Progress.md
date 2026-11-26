@@ -117,6 +117,13 @@
   2nd / 3rd Dude 14% / 9% (was 35% / 33%); Act 1 teams with every role covered 54% (was 62%). Only 5 of 50 Dudes
   have a secondary role, all mapped from code; none audited yet.
 
+- 2026-11-26 (2): Draft roles = our Functions (user), not the game's roles: Offense, Defense, Support, Healing.
+  Healing is a Function of its own, split off Support (Heal focus, 45 effects), shown green; Defense moved from olive
+  to a yellower tone. Each Dude's role is scored from his ability (3) and his own relics (1 each): primary = top,
+  secondary = next if it reaches 3 (extract tools/effect_roles.py); 22 Dudes now have a secondary (was 5). Simulated
+  drafts: Act 1 teams with every role covered 78% (was 54% on the game's roles); report extract
+  docs/role_functions_2026-11-26.md.
+
 ## Open
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD, Airhorn done (2026-11-25: Regular Dude excluded like summons; AoE gap
