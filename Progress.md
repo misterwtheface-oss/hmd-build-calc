@@ -135,7 +135,7 @@
   Offense.
 
 ## Open
-- [ ] Mixed debuffs (both sides): Veneers, Psychic Hood, Saddle Horn kept Offense; user to rule (extract tools/code_tags.py debuff_side).
+- [ ] Mixed debuffs (both sides): Veneers, Psychic Hood, Saddle Horn stay Offense (user 2026-11-26) until each one's Dude audit (Football, Psionic, Cowboy); extract tools/code_tags.py debuff_side.
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
   Recommended on section; extract docs/held_picks_audit.md (rule HMD-picks-pace). ADHD, Airhorn done (2026-11-25: Regular Dude excluded like summons; AoE gap
 multiplier for AoE-giving held items); Bad Credit done 2026-11-25 (Damage Taken consumer fed by Taunt and
