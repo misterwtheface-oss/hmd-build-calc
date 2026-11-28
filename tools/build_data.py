@@ -223,7 +223,7 @@ def main():
     for kind, pool in (("trinket", "trinkets"), ("food", "food"), ("foodstat", "foodstats")):
         unit.update({kind + ":" + t["id"]: kind + ":" + t["id"] for t in E.get(pool, [])})
     rar = syn["rarity"]
-    edges = sorted(([e["a"], e["b"], e["score"], sorted(e["channels"], key=lambda c: -rar.get(c, 0))]
+    edges = sorted(([e["a"], e["b"], e["score"], sorted(e["channels"], key=lambda c: (-rar.get(c, 0), c))]
                     for e in E["edges"] if e["kind"] == "synergy"), key=lambda e: -e[2])
     # channel pages: who provides it, who uses it (exactly the effects the edge rules joined)
     chans = {}
@@ -239,7 +239,7 @@ def main():
     # a channel only counts as a synergy when it joins two or more units (Pact = Warlock + his own relics: dropped)
     chans = sorted(({**c, "prov": sorted(c["prov"]), "use": sorted(c["use"])} for c in chans.values()
                     if len({unit[k] for k in c["prov"] | c["use"]}) > 1), key=lambda c: c["id"])
-    links_of = {k: sorted(([u, round(sum(rar.get(c, 0) for c in cs), 2), sorted(cs, key=lambda c: -rar.get(c, 0))]
+    links_of = {k: sorted(([u, round(sum(rar.get(c, 0) for c in cs), 2), sorted(cs, key=lambda c: (-rar.get(c, 0), c))]
                            for u, cs in v.items()), key=lambda x: -x[1])[:12] for k, v in part.items()}
     # effect-to-effect pairs across units, so the draft can say which ability / relic holds what:
     # [provider, consumer, channel, provider's channel, provider facet, consumer facet, wield] as indexes into keys /
