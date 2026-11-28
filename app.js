@@ -128,7 +128,7 @@ function familyEffects(f, n) {
   return itemEffects([...membersOf(f), ...H.relics.filter((r) => r.fam === f || members.includes(r.dude))], n);
 }
 // magnitude bar: share of the largest value of this field among the shown entries (rule A-magnitude-bars)
-const bar = (v, max) => `<span class="bar"><i style="width:${max ? Math.round((100 * v) / max) : 0}%"></i></span>`;
+const bar = (v, max) => `<span class="bar"><i style="width:${max > 0 ? Math.max(0, Math.round((100 * v) / max)) : 0}%"></i></span>`;
 function effectList(f, n, big) {
   return effectBars(familyEffects(f, n), big);
 }
@@ -767,7 +767,8 @@ function renderDraft() {
   const maxes = { own: Math.max(0, ...ovs.map((o) => (o ? o.own : 0))),
     fam: Math.max(0, ...ovs.flatMap((o) => (o ? o.newFams.map((n) => n.score) : []))), total: max };
 
-  const best = max > 0 && draft.slots.filter(Boolean).length > 1 ? max : null;   // every offer tied for the most overlap
+  // every offer tied for the top score, below zero too (pool dilution can sink all three)
+  const best = draft.slots.filter(Boolean).length > 1 ? Math.max(...ovs.filter(Boolean).map((o) => o.score)) : null;
   const counts = {};
   for (const k of draft.build) counts[k] = (counts[k] || 0) + 1;
   const tile = (k) =>
