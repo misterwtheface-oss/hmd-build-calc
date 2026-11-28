@@ -5,7 +5,7 @@
   the build takes the top option of the mode under test (old, or famNet).
   Per Dude pick: median own fit, new Family score, dilution, total; offers below 0; offers whose three all score <= 0;
   picks that bring a new Family; and, on the same offer, how often the two modes pick a different Dude.
-  Usage: [FAMK=1] node tools/dilute_probe.js [runs=200] [old|famNet]   (the mode the simulated build follows; default old)
+  Usage: [FAMK=<live>] node tools/dilute_probe.js [runs=200] [old|famNet]   (the mode the simulated build follows; default old)
 */
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const APP = path.join(__dirname, "..");
@@ -30,7 +30,7 @@ function pool(build) {
   const rs = [...A.relicsOfSource("universal"), ...A.buildFams(team).flatMap(A.relicsOfFamilyPool), ...team.flatMap((d) => A.relicsOfDude(d.t))];
   return rs.map((r) => "relic:" + r.id).filter((k) => !build.includes(k));
 }
-const FAMK = +process.env.FAMK || 1;   // WEIGHT.famK for the famNet mode
+const FAMK = +process.env.FAMK || A.WEIGHT.famK;   // WEIGHT.famK for the famNet mode (default: live)
 const score = (k, build, net) => { A.WEIGHT.famNet = net; A.WEIGHT.famK = FAMK; return A.overlap(A.itemOf(k), build); };
 const top = (sc) => sc.reduce((a, b) => (b[1].score > a[1].score ? b : a));
 const blank = () => ({ own: [], fam: [], dil: [], tot: [], neg: 0, allNeg: 0, offers: 0, newFam: 0, diff: 0 });

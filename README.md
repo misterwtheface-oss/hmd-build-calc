@@ -16,6 +16,8 @@ python tools/build_data.py [--strict]   # reads ../_hmd_extract (local only), wr
                                          # + manifest.webmanifest and assets/app install icons (Spell Book sprite)
 node tools/render_check.js               # renders every tab, filter and detail view; fails on errors or missing art
 node tools/serve.mjs                     # local preview; stop it when done
+node tools/weight_preview.js [runs]      # Draft weighting variants on simulated drafts
+node tools/dilute_probe.js [runs] [old|famNet]   # Dude offer score split (own fit, new Family, dilution); FAMK=<k> to try a strictness
 ```
 `git config core.hooksPath .githooks` once per clone: the pre-commit hook re-stamps cache-bust tokens.
 

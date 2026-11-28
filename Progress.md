@@ -87,6 +87,15 @@
   (Knight), Weighted Vest (Ghost) now sit on one Dude; Vampire, Cleric (x2), Broadcaster get back the pick the floor
   displaced (only Vampire's cost anything, 2.67). Every trinket still on at least one Dude.
 
+- 2026-11-28: Draft pool dilution reworked (user: dilution sank most Dude offers below zero, and sometimes no offer
+  was proposed). Fix: the top offer is highlighted whatever its sign; a negative score draws an empty bar, not a full one.
+  New Family net (app.js WEIGHT.famNet, famK 1.5, user pick): a new Dude's own relics are no minus; each new Family
+  scores what its relics add to the build's pool value minus 1.5 x what the rest of the pool loses to them, so a Family
+  must fit somewhat better than the build's average pool relic to break even. Promoter relics were already outside the
+  pool. 200 simulated runs in game order (tools/dilute_probe.js): Dude offers below zero 6-29% -> 0-4%; 60% of new
+  Families score zero or more; the top pick changes vs the old dilution on 9-29% of Dude offers. Strictness 1 / 2 / 3
+  kept as options (80% / 43% / 22% of new Families at zero or more).
+
 ## Open
 - [ ] Mixed debuffs (both sides): Veneers, Psychic Hood, Saddle Horn stay Offense (user 2026-11-26) until each one's Dude audit (Football, Psionic, Cowboy); extract tools/code_tags.py debuff_side.
 - [ ] Held picks audit (user 2026-11-24): one trinket per session, alphabetical, then food, from each trinket's
@@ -102,6 +111,7 @@ from code, extract tools/dash_target.py: farthest / far ally x1.5, nearest x0.5 
 - [ ] Flyer rerolls: does a reroll leave out the Dudes / trinkets just shown? (extract docs/offer_draws.md, Open)
 - [ ] Draft weighting: gentler curve (WEIGHT.exp 1.25) kept as an option, not live; report extract
   docs/weight_scenarios_2026-11-25.md.
+- [ ] Backlog (user 2026-11-28, dropped for now): count a drafted Dude's own relics as near-certain instead of at pool odds.
 - [ ] Backlog (user 2026-11-25, later): a "discovered Dudes" setting so the Dude reroll advice weighs undiscovered Dude
   Types 3:1 as the game does (extract docs/offer_draws.md).
 - [ ] Trinkets: no Function / Focus tags yet (needs their code decoded like relics); user review of trinket tags.

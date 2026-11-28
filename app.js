@@ -472,7 +472,8 @@ const buildFams = (team) => [...new Set(team.flatMap((d) => d.fam))].filter((f) 
 // build's pool value with its relics in the pool minus without, so a Family as useful to this build as the build's
 // average pool relic nets zero, a better one gains, a poor one costs. Off = the old dilution line. famK: how hard the
 // net counts the build's loss (1 = break even at the average pool relic; above 1 a Family must fit better than that)
-const WEIGHT = { mode: "grow", seen: 25, rare: 2, exp: 1.5, dedupe2: true, growOn: "build", famNet: false, famK: 1 };   // rare: exponent on channel rarity
+// Live: famNet, famK 1.5 (user 2026-11-28; tools/dilute_probe.js: Dude offers below zero 6-29% -> 0-4%)
+const WEIGHT = { mode: "grow", seen: 25, rare: 2, exp: 1.5, dedupe2: true, growOn: "build", famNet: true, famK: 1.5 };   // rare: exponent on channel rarity
 const MAG = { flat: (w) => (w > 0 ? 1 : 0), linear: (w) => w, sqrt: Math.sqrt, log: (w) => Math.log2(1 + w), grow: (w) => w ** WEIGHT.exp };
 const poolSize = (types, fams) => relicsOfSource("universal").length + fams.reduce((a, f) => a + relicsOfFamilyPool(f).length, 0)
   + types.reduce((a, t) => a + relicsOfDude(t).length, 0);
